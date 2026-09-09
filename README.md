@@ -1,34 +1,29 @@
 # Maps Site Generator
 
-Sistema da Virtualizze para localizar empresas no Google Maps, gerar sites com GPT e publicá-los na Vercel.
+Sistema da Virtualizze para buscar empresas, analisar presença digital, gerar sites com GPT, publicar na Vercel e enviar a abordagem pelo WhatsApp.
 
-## Objetivo
+## Fluxo
 
-Centralizar e acompanhar o processo completo:
+1. O usuário define nicho, cidade, quantidade e execução manual ou agendada.
+2. O sistema busca e deduplica empresas contra a base existente.
+3. Uma análise aprofundada verifica site, redes e qualidade da presença digital.
+4. Empresas inelegíveis são descartadas com o motivo registrado.
+5. A IA gera o site e a mensagem para as empresas aprovadas.
+6. O site é validado e publicado na Vercel.
+7. A URL publicada é inserida na mensagem.
+8. Conforme a configuração da operação, a mensagem é enviada automaticamente ou aguarda aprovação humana.
+9. Toda a execução fica registrada por empresa, usuário, horário e configuração usada.
 
-1. Buscar empresas no Google Maps.
-2. Coletar e organizar os dados públicos relevantes.
-3. Selecionar empresas para processamento.
-4. Gerar conteúdo e estrutura do site com GPT.
-5. Validar o resultado antes da publicação.
-6. Publicar o site na Vercel.
-7. Acompanhar status, erros e histórico em uma interface.
+## Estado do projeto
 
-## Status
+- Protótipo Python original, sem credenciais, em [`prototype/`](prototype/).
+- Arquitetura proposta em [`docs/architecture.md`](docs/architecture.md).
+- Protótipo navegável do painel: https://virtualizze-prospector.virtualizzeautomacao.chatgpt.site
 
-Projeto inicializado. O script Python existente ainda será analisado antes da definição da arquitetura, dependências e interface.
-
-## Próxima etapa
-
-Adicionar o script Python atual para mapear:
-
-- entradas, saídas e dependências;
-- etapas que podem ser automatizadas;
-- operações que precisam de aprovação humana;
-- modelo de dados e persistência;
-- integração com Google Maps, OpenAI e Vercel;
-- estados exibidos na interface de acompanhamento.
+O painel atual usa dados demonstrativos para validar o fluxo e a experiência. A próxima fase liga a interface ao backend, banco, filas e integrações reais.
 
 ## Segurança
 
-Credenciais e tokens devem ser configurados por variáveis de ambiente. Nunca envie arquivos `.env`, chaves de API ou tokens ao repositório.
+Configure tokens exclusivamente por variáveis de ambiente. Nunca envie arquivos `.env`, chaves de API ou tokens ao repositório.
+
+As credenciais que estavam no protótipo original precisam ser revogadas e substituídas antes de continuar o desenvolvimento.
