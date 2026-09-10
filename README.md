@@ -1,41 +1,61 @@
 # Maps Site Generator
 
-Sistema da Virtualizze para buscar empresas, analisar presença digital, gerar sites com GPT, publicar na Vercel e enviar a abordagem pelo WhatsApp.
+Sistema da Virtualizze para buscar empresas, analisar presença digital, gerar sites com GPT, publicar na Vercel e realizar a prospecção pelo WhatsApp.
 
-## Fluxo
+## Estrutura do repositório
 
-1. O usuário define nicho, cidade, quantidade e execução manual ou agendada.
-2. O sistema compara cada resultado com o histórico global armazenado no Supabase.
-3. Empresas já prospectadas são bloqueadas antes da análise, geração e envio.
-4. Uma análise aprofundada verifica site, redes e qualidade da presença digital.
-5. Empresas inelegíveis são descartadas com o motivo registrado.
-6. A IA gera o site e a mensagem para as empresas aprovadas.
-7. O site é validado e publicado na Vercel.
-8. A URL publicada é inserida na mensagem.
-9. Conforme a configuração da operação, a mensagem é enviada automaticamente ou aguarda aprovação humana.
-10. Toda a execução fica registrada por empresa, usuário, horário e configuração usada.
+```text
+maps-site-generator/
+├── frontend/   # Interface Next.js — deploy na Vercel
+├── backend/    # Python, workers e integrações — deploy na VPS
+└── docs/       # Arquitetura e decisões do projeto
+```
+
+Frontend e backend possuem dependências, variáveis de ambiente e instruções próprias. Eles podem ser implantados de forma independente.
+
+## Frontend
+
+```bash
+cd frontend
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+Na Vercel, configure `frontend` como **Root Directory**.
+
+## Backend
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+python main.py
+```
+
+O código Python atual ainda é o protótipo da lógica. A API, as filas, o scheduler e a integração com Supabase serão implementados na próxima fase.
+
+Para baixar somente o backend na VPS:
+
+```bash
+git clone --filter=blob:none --sparse https://github.com/VirtualizzeAI/maps-site-generator.git
+cd maps-site-generator
+git sparse-checkout set backend docs
+```
 
 ## Arquitetura definida
 
-- interface Next.js publicada na Vercel;
+- interface Next.js na Vercel;
+- backend e workers Python na VPS;
 - Supabase Auth, PostgreSQL, Realtime e Storage;
-- API, scheduler e workers Python executados separadamente;
-- Vercel para publicar os sites gerados;
+- Vercel para publicação dos sites gerados;
 - Evolution API para o WhatsApp;
-- deduplicação global e transacional para garantir uma única prospecção por empresa.
+- deduplicação global para impedir uma segunda prospecção da mesma empresa.
 
-Os detalhes estão em [`docs/architecture.md`](docs/architecture.md).
-
-## Estado do projeto
-
-- Protótipo Python original, sem credenciais, em [`prototype/`](prototype/).
-- Arquitetura proposta em [`docs/architecture.md`](docs/architecture.md).
-- Protótipo navegável do painel: https://virtualizze-prospector.virtualizzeautomacao.chatgpt.site
-
-O painel atual usa dados demonstrativos para validar o fluxo e a experiência. A próxima fase liga a interface ao backend, Supabase, filas e integrações reais.
+Consulte [`docs/architecture.md`](docs/architecture.md) para os detalhes.
 
 ## Segurança
 
-Configure tokens exclusivamente por variáveis de ambiente. Nunca envie arquivos `.env`, chaves de API ou tokens ao repositório.
-
-As credenciais que estavam no protótipo original precisam ser revogadas e substituídas antes de continuar o desenvolvimento.
+Nunca envie arquivos `.env`, chaves de API ou tokens ao repositório. As credenciais encontradas no protótipo original devem ser consideradas comprometidas e substituídas.
