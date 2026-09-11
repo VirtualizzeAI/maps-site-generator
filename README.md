@@ -1,19 +1,17 @@
 # Maps Site Generator
 
-Sistema da Virtualizze para buscar empresas, analisar presença digital, gerar sites com GPT, publicar na Vercel e realizar a prospecção pelo WhatsApp.
+Sistema da Virtualizze para buscar empresas, analisar presença digital, gerar sites com IA, publicar na Vercel e realizar a prospecção pelo WhatsApp.
 
-## Estrutura do repositório
+## Estrutura
 
 ```text
 maps-site-generator/
-├── frontend/   # Interface Next.js — deploy na Vercel
-├── backend/    # Python, workers e integrações — deploy na VPS
-└── docs/       # Arquitetura e decisões do projeto
+├── frontend/   # Next.js — deploy na Vercel
+├── backend/    # FastAPI, workers e integrações — deploy na VPS
+└── docs/       # arquitetura e padrões
 ```
 
-Frontend e backend possuem dependências, variáveis de ambiente e instruções próprias. Eles podem ser implantados de forma independente.
-
-Os padrões reutilizáveis de estrutura, nomenclatura e separação de responsabilidades estão documentados em [`docs/project-standards.md`](docs/project-standards.md).
+Frontend e backend possuem dependências, variáveis de ambiente e deploys independentes.
 
 ## Frontend
 
@@ -34,29 +32,38 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-python main.py
+uvicorn src.main:app --reload
 ```
 
-O código Python atual ainda é o protótipo da lógica. A API, as filas, o scheduler e a integração com Supabase serão implementados na próxima fase.
-
-Para baixar somente o backend na VPS:
+Na VPS:
 
 ```bash
-git clone --filter=blob:none --sparse https://github.com/VirtualizzeAI/maps-site-generator.git
-cd maps-site-generator
-git sparse-checkout set backend docs
+docker compose up -d --build
 ```
 
-## Arquitetura definida
+## Estado do desenvolvimento
 
-- interface Next.js na Vercel;
-- backend e workers Python na VPS;
-- Supabase Auth, PostgreSQL, Realtime e Storage;
-- Vercel para publicação dos sites gerados;
-- Evolution API para o WhatsApp;
-- deduplicação global para impedir uma segunda prospecção da mesma empresa.
+Já disponível:
 
-Consulte [`docs/architecture.md`](docs/architecture.md) para os detalhes.
+- painel Next.js reorganizado em `frontend/src/`;
+- cliente HTTP e contratos iniciais de operações;
+- API FastAPI;
+- autenticação por token Supabase;
+- criação e consulta de operações;
+- estrutura multiusuário por organização;
+- migration inicial do banco;
+- normalização de empresas para deduplicação;
+- Docker Compose com API e Redis.
+
+Próximas etapas:
+
+- aplicar e validar a migration no projeto Supabase;
+- implementar busca e análise digital como workers;
+- migrar as integrações Serper, OpenAI, Vercel e Evolution;
+- ligar os dados reais ao painel;
+- implementar agendamento e aprovação humana.
+
+Consulte [`docs/architecture.md`](docs/architecture.md) e [`docs/project-standards.md`](docs/project-standards.md).
 
 ## Segurança
 

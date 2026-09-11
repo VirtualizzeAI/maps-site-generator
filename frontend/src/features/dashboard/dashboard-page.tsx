@@ -43,7 +43,7 @@ function StatusBadge({ status }: { status: CompanyStatus }) {
   return <Badge variant="outline" className={`rounded-full px-2.5 py-1 font-medium ${statusStyles[status]}`}>{status}</Badge>;
 }
 
-export default function Home() {
+export function DashboardPage() {
   const [active, setActive] = useState("Visão geral");
   const [newOperationOpen, setNewOperationOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);

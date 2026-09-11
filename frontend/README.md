@@ -1,6 +1,16 @@
 # Frontend
 
-Interface Next.js do Virtualizze Prospector.
+Interface Next.js do Virtualizze Prospector, organizada em `src/` por responsabilidade e domínio.
+
+```text
+src/
+├── app/          # rotas e layouts Next.js
+├── components/   # componentes visuais reutilizáveis
+├── features/     # funcionalidades do produto
+├── services/     # clientes compartilhados
+├── lib/          # utilitários
+└── styles/       # estilos globais e vendor
+```
 
 ## Desenvolvimento
 
