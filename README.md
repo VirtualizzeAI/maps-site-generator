@@ -13,6 +13,8 @@ maps-site-generator/
 
 Frontend e backend possuem dependências, variáveis de ambiente e instruções próprias. Eles podem ser implantados de forma independente.
 
+Os padrões reutilizáveis de estrutura, nomenclatura e separação de responsabilidades estão documentados em [`docs/project-standards.md`](docs/project-standards.md).
+
 ## Frontend
 
 ```bash
