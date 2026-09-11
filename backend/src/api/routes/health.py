@@ -11,6 +11,6 @@ def health_check() -> dict[str, str | bool]:
     return {
         "status": "ok",
         "service": settings.app_name,
-        "supabase_configured": settings.supabase_configured,
-        "redis_configured": bool(settings.redis_url),
+        "database": "sqlite" if settings.database_url.startswith("sqlite") else "postgresql",
+        "integrations_mode": settings.integrations_mode,
     }

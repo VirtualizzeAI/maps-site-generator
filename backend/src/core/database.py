@@ -1,24 +1,37 @@
-from functools import lru_cache
+from collections.abc import Generator
+from pathlib import Path
 
-from fastapi import HTTPException, status
-from supabase import Client, create_client
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from src.core.config import get_settings
+from src.models.base import Base
+
+settings = get_settings()
+if settings.database_url.startswith("sqlite"):
+    Path(settings.data_dir).mkdir(parents=True, exist_ok=True)
+
+engine = create_engine(
+    settings.database_url,
+    connect_args={"check_same_thread": False} if settings.database_url.startswith("sqlite") else {},
+    pool_pre_ping=True,
+)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 
-@lru_cache
-def _create_supabase_client() -> Client:
-    settings = get_settings()
-    if not settings.supabase_configured:
-        raise RuntimeError("Supabase não configurado")
-    return create_client(settings.supabase_url, settings.supabase_service_role_key)
-
-
-def get_supabase() -> Client:
+def get_db() -> Generator[Session, None, None]:
+    session = SessionLocal()
     try:
-        return _create_supabase_client()
-    except RuntimeError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
-        ) from exc
+        yield session
+    finally:
+        session.close()
+
+
+def init_database() -> None:
+    from src.models import entities  # noqa: F401
+
+    Base.metadata.create_all(bind=engine)
+    from src.services.auth import ensure_default_admin
+
+    with SessionLocal() as session:
+        ensure_default_admin(session)

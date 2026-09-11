@@ -2,14 +2,18 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from src.api.router import api_router
 from src.core.config import get_settings
+from src.core.database import init_database
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    get_settings()
+    settings = get_settings()
+    settings.generated_sites_dir.mkdir(parents=True, exist_ok=True)
+    init_database()
     yield
 
 
@@ -27,3 +31,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(api_router)
+settings.generated_sites_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/generated", StaticFiles(directory=settings.generated_sites_dir, html=True), name="generated-sites")

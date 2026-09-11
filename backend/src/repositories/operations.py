@@ -1,38 +1,51 @@
-from uuid import UUID
+from __future__ import annotations
 
-from supabase import Client
+from datetime import UTC, datetime
 
+from sqlalchemy import Select, select
+from sqlalchemy.orm import Session
+
+from src.models.entities import Company, Operation, OperationCompany
 from src.schemas.operations import OperationCreate
 
 
 class OperationRepository:
-    def __init__(self, client: Client):
-        self.client = client
+    def __init__(self, session: Session):
+        self.session = session
 
-    def is_member(self, organization_id: UUID, user_id: UUID) -> bool:
-        response = (
-            self.client.table("organization_members")
-            .select("user_id")
-            .eq("organization_id", str(organization_id))
-            .eq("user_id", str(user_id))
-            .limit(1)
-            .execute()
+    def create(self, payload: OperationCreate, user_id: str) -> Operation:
+        scheduled_for = payload.scheduled_for
+        if scheduled_for and scheduled_for.tzinfo is None:
+            scheduled_for = scheduled_for.replace(tzinfo=UTC)
+        is_future = scheduled_for and scheduled_for > datetime.now(UTC)
+        operation = Operation(
+            **payload.model_dump(exclude={"scheduled_for"}),
+            scheduled_for=scheduled_for,
+            created_by=user_id,
+            status="scheduled" if is_future else "queued",
         )
-        return bool(response.data)
+        self.session.add(operation)
+        self.session.commit()
+        self.session.refresh(operation)
+        return operation
 
-    def create(self, payload: OperationCreate, user_id: UUID) -> dict:
-        data = payload.model_dump(mode="json")
-        data["created_by"] = str(user_id)
-        data["status"] = "scheduled" if payload.scheduled_for else "searching"
-        response = self.client.table("operations").insert(data).execute()
-        return response.data[0]
-
-    def list(self, organization_id: UUID) -> list[dict]:
-        response = (
-            self.client.table("operations")
-            .select("*")
-            .eq("organization_id", str(organization_id))
-            .order("created_at", desc=True)
-            .execute()
+    def list(self, organization_id: str) -> list[Operation]:
+        statement: Select[tuple[Operation]] = (
+            select(Operation)
+            .where(Operation.organization_id == organization_id)
+            .order_by(Operation.created_at.desc())
         )
-        return response.data
+        return list(self.session.scalars(statement))
+
+    def get(self, operation_id: str) -> Operation | None:
+        return self.session.get(Operation, operation_id)
+
+    def companies(self, operation_id: str) -> list[tuple[OperationCompany, Company]]:
+        return list(
+            self.session.execute(
+                select(OperationCompany, Company)
+                .join(Company, Company.id == OperationCompany.company_id)
+                .where(OperationCompany.operation_id == operation_id)
+                .order_by(OperationCompany.created_at.desc())
+            ).all()
+        )

@@ -1,70 +1,59 @@
 # Maps Site Generator
 
-Sistema da Virtualizze para buscar empresas, analisar presença digital, gerar sites com IA, publicar na Vercel e realizar a prospecção pelo WhatsApp.
+Sistema da Virtualizze para buscar empresas, analisar presença digital, gerar e publicar sites e fazer prospecção pelo WhatsApp.
 
 ## Estrutura
 
 ```text
 maps-site-generator/
-├── frontend/   # Next.js — deploy na Vercel
-├── backend/    # FastAPI, workers e integrações — deploy na VPS
-└── docs/       # arquitetura e padrões
+├── frontend/   # Next.js — deploy independente na Vercel
+├── backend/    # FastAPI + worker — deploy independente na VPS
+└── docs/       # arquitetura e padrões reutilizáveis
 ```
 
-Frontend e backend possuem dependências, variáveis de ambiente e deploys independentes.
+## Executar o MVP local
 
-## Frontend
+O modo padrão é `mock`: o fluxo completo funciona sem chaves externas, usa SQLite, gera sites locais e simula o envio do WhatsApp.
 
-```bash
-cd frontend
-npm install
-cp .env.example .env.local
-npm run dev
-```
-
-Na Vercel, configure `frontend` como **Root Directory**.
-
-## Backend
+Backend e worker:
 
 ```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
 cp .env.example .env
-uvicorn src.main:app --reload
+docker compose up --build
 ```
 
-Na VPS:
+Frontend, em outro terminal:
 
 ```bash
-docker compose up -d --build
+cd frontend
+cp .env.example .env.local
+npm install
+npm run dev
 ```
 
-## Estado do desenvolvimento
+Acesse `http://localhost:3000` com `admin@virtualizze.com` / `admin123`. Troque a senha no `.env` antes de qualquer publicação.
 
-Já disponível:
+Sem Docker, instale `backend/requirements.txt` e execute em terminais separados:
 
-- painel Next.js reorganizado em `frontend/src/`;
-- cliente HTTP e contratos iniciais de operações;
-- API FastAPI;
-- autenticação por token Supabase;
-- criação e consulta de operações;
-- estrutura multiusuário por organização;
-- migration inicial do banco;
-- normalização de empresas para deduplicação;
-- Docker Compose com API e Redis.
+```bash
+uvicorn src.main:app --reload
+python -m src.workers.runner
+```
 
-Próximas etapas:
+## Fluxos disponíveis
 
-- aplicar e validar a migration no projeto Supabase;
-- implementar busca e análise digital como workers;
-- migrar as integrações Serper, OpenAI, Vercel e Evolution;
-- ligar os dados reais ao painel;
-- implementar agendamento e aprovação humana.
+- login local persistente;
+- operação manual ou agendada;
+- envio automático ou com aprovação humana;
+- busca, análise digital, geração de site, publicação e envio simulados;
+- painel atualizado a cada três segundos;
+- histórico consolidado de empresas e bloqueio de nova prospecção;
+- configuração de Serper, OpenAI, Vercel e Evolution API;
+- troca futura para Supabase PostgreSQL por `DATABASE_URL`.
 
-Consulte [`docs/architecture.md`](docs/architecture.md) e [`docs/project-standards.md`](docs/project-standards.md).
+Veja [a arquitetura](docs/architecture.md) e [os padrões do projeto](docs/project-standards.md).
 
-## Segurança
+## Produção
 
-Nunca envie arquivos `.env`, chaves de API ou tokens ao repositório. As credenciais encontradas no protótipo original devem ser consideradas comprometidas e substituídas.
+Configure `INTEGRATIONS_MODE=real`, as credenciais externas e uma senha administrativa forte. Na Vercel, use `frontend/` como Root Directory e a URL pública da API em `NEXT_PUBLIC_API_URL`.

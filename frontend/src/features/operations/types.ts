@@ -2,6 +2,7 @@ export type ApprovalMode = "automatic" | "human_review";
 
 export type OperationStatus =
   | "scheduled"
+  | "queued"
   | "searching"
   | "analyzing"
   | "generating"
@@ -23,6 +24,16 @@ export interface Operation {
   scheduled_for: string | null;
   created_at: string;
   updated_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+  error_message: string | null;
+  message_template: string;
+  found_count: number;
+  analyzed_count: number;
+  generated_count: number;
+  sent_count: number;
+  discarded_count: number;
+  blocked_count: number;
 }
 
 export interface CreateOperationInput {
@@ -32,6 +43,5 @@ export interface CreateOperationInput {
   target_count: number;
   approval_mode: ApprovalMode;
   message_template: string;
-  whatsapp_integration_id?: string;
   scheduled_for?: string;
 }
