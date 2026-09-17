@@ -1,25 +1,36 @@
 # Arquitetura do Virtualizze Prospector
 
-## Deploy
+## Aplicações
 
-- Frontend Next.js: Vercel, usando `frontend/` como diretório raiz.
-- Backend FastAPI e worker: VPS via Docker Compose, usando `backend/` separadamente.
-- Desenvolvimento atual: SQLite persistido em `backend/data/`.
-- Produção futura: PostgreSQL do Supabase por meio de `DATABASE_URL`.
+- `frontend/`: Next.js e TypeScript, preparado para a Vercel.
+- `backend/`: Fastify e TypeScript, preparado para a VPS.
+- Cada pasta possui seu próprio `package.json`, dependências e deploy.
 
-## Fluxo
+## Backend local
 
-1. O usuário cria ou agenda uma operação no painel.
+Um único processo Node.js executa:
+
+- API HTTP;
+- autenticação e controle de usuários;
+- worker das operações;
+- verificação das operações agendadas;
+- persistência JSON local;
+- hospedagem dos sites gerados no modo de teste.
+
+Essa decisão simplifica o desenvolvimento local. Depois dos testes, a camada `store.ts` será substituída por um repositório Supabase/PostgreSQL sem alterar os contratos da API ou o frontend.
+
+## Fluxo da operação
+
+1. O usuário cria ou agenda uma operação.
 2. O worker busca empresas pelo nicho e cidade.
-3. Cada resultado é consolidado no histórico e recebe identidades normalizadas.
-4. Empresas já prospectadas são bloqueadas antes da análise e do envio.
-5. O analisador verifica telefone, site e sinais de presença digital.
-6. Para empresas elegíveis, o sistema gera HTML e publica o site.
-7. A mensagem recebe nome e URL do site.
-8. No modo automático ela é enviada; no modo humano aguarda aprovação no painel.
-9. Contadores, estados e eventos ficam persistidos para auditoria.
+3. As identidades fortes são normalizadas e comparadas com o histórico.
+4. Empresas presentes em operações anteriores são bloqueadas.
+5. A presença digital é analisada além do campo `website` da busca.
+6. O site é gerado e publicado.
+7. A mensagem recebe o nome da empresa e a URL gerada.
+8. O envio acontece automaticamente ou aguarda aprovação humana.
 
-## Modos
+## Modos de integração
 
-- `INTEGRATIONS_MODE=mock`: fluxo local completo, sites locais e WhatsApp simulado.
-- `INTEGRATIONS_MODE=real`: Serper, OpenAI, Vercel e Evolution API com credenciais configuradas.
+- `mock`: executa o fluxo completo localmente sem cobranças ou mensagens reais.
+- `real`: utiliza Serper, OpenAI, Vercel e Evolution API.

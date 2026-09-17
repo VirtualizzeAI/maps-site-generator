@@ -1,23 +1,25 @@
-# Backend
+# Backend Node.js + TypeScript
 
-API FastAPI e worker persistente do Virtualizze Prospector, preparados para deploy separado na VPS.
+API, worker e agendador do Virtualizze Prospector executados no mesmo processo Node.js. Não utiliza Python nem Docker.
 
-## Responsabilidades
-
-- autenticação local e organizações;
-- operações imediatas e agendadas;
-- SQLite local, substituível por PostgreSQL/Supabase;
-- histórico e deduplicação de empresas;
-- busca, análise, geração de site, deploy e WhatsApp;
-- aprovação humana e auditoria de estados.
-
-## Processos
+## Desenvolvimento local
 
 ```bash
-uvicorn src.main:app --reload
-python -m src.workers.runner
+copy .env.example .env
+npm install
+npm run dev
 ```
 
-Para processar somente uma operação e encerrar: `python -m src.workers.runner --once`.
+A API fica em `http://localhost:8000` e a documentação de saúde em `http://localhost:8000/health`.
 
-O Docker Compose inicia API e worker com o mesmo volume `./data`. Consulte `.env.example` para alternar entre integrações simuladas e reais.
+O modo padrão `mock` executa o fluxo completo sem consumir APIs: busca empresas simuladas, analisa, gera sites, publica em `/generated/` e simula o WhatsApp. Os dados são persistidos em `data/database.json`.
+
+## Produção
+
+```bash
+npm install
+npm run build
+npm start
+```
+
+Para usar as integrações reais, configure as credenciais e defina `INTEGRATIONS_MODE=real`. A camada de armazenamento local será substituída pelo Supabase depois dos testes.

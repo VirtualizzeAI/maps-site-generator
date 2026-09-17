@@ -1,8 +1,5 @@
-.venv/
-__pycache__/
-*.py[cod]
-.env
-resultados.csv
-sites/
+node_modules/
+dist/
 data/
-.pytest_cache/
+.env
+*.log
