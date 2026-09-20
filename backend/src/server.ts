@@ -12,7 +12,11 @@ import type { IntegrationSettings, Message, Operation } from "./types.js";
 
 const app=Fastify({logger:process.env.NODE_ENV!=="test"});
 await store.initialize();
-await app.register(cors,{origin:config.frontendUrl,credentials:true});
+await app.register(cors,{
+  origin:config.frontendUrl,
+  credentials:true,
+  methods:["GET","HEAD","POST","PUT","PATCH","DELETE","OPTIONS"],
+});
 await app.register(staticFiles,{root:sitesDir,prefix:"/generated/",decorateReply:false});
 
 app.setErrorHandler((error:unknown,_request,reply)=>{const record=error as {statusCode?:unknown},status=error instanceof ApiError?error.statusCode:typeof record.statusCode==="number"?record.statusCode:500,message=error instanceof Error?error.message:"Erro interno";reply.status(status).send({detail:message})});
