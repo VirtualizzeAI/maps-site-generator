@@ -59,6 +59,7 @@ maps-site-generator/
 ### Arquivamento
 
 - Administradores podem arquivar empresas e operações.
+- Na tela de empresas, administradores podem selecionar uma ou todas as empresas visíveis e arquivá-las em lote.
 - O item arquivado deixa de aparecer no painel.
 - A identidade permanece no histórico e continua impedindo nova prospecção.
 - A interface atualiza os dados sem recarregar a página ou trocar a aba selecionada.
