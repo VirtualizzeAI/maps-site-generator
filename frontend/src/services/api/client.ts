@@ -27,13 +27,16 @@ export async function apiRequest<T>(
   options: RequestInit = {},
   accessToken?: string,
 ): Promise<T> {
+  const headers = new Headers(options.headers);
+
+  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+  if (options.body != null && !headers.has("Content-Type") && !(options.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
+  }
+
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...options.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {
