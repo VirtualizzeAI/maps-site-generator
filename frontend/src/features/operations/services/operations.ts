@@ -17,3 +17,7 @@ export function createOperation(accessToken: string, input: CreateOperationInput
 export function getOperation(accessToken: string, operationId: string) {
   return apiRequest<OperationDetail>(`/api/v1/operations/${operationId}`, {}, accessToken);
 }
+
+export function archiveOperation(accessToken: string, operationId: string) {
+  return apiRequest<{ success: boolean }>(`/api/v1/operations/${operationId}`, { method: "DELETE" }, accessToken);
+}

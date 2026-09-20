@@ -30,6 +30,13 @@ Essa decisão simplifica o desenvolvimento local. Depois dos testes, a camada `s
 7. A mensagem recebe o nome da empresa e a URL gerada.
 8. O envio acontece automaticamente ou aguarda aprovação humana.
 
+## Histórico e arquivamento
+
+- Cada empresa preserva dados de contato, endereço, links, primeira pesquisa e operações relacionadas.
+- Contatos públicos encontrados no site original durante a análise são incorporados ao cadastro.
+- Operações e empresas são arquivadas, não removidas definitivamente.
+- O arquivamento é permitido apenas para administradores e mantém a deduplicação ativa.
+
 ## Modos de integração
 
 - `mock`: executa o fluxo completo localmente sem cobranças ou mensagens reais.

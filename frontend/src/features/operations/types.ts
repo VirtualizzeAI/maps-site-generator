@@ -37,6 +37,8 @@ export interface Operation {
   current_company_id: string | null;
   current_company_name: string | null;
   current_stage: string | null;
+  archived_at: string | null;
+  archived_by: string | null;
 }
 
 export interface OperationCompany {
@@ -44,7 +46,15 @@ export interface OperationCompany {
   company_id: string;
   name: string;
   phone: string | null;
+  other_phones: string[];
+  email: string | null;
+  address: string | null;
+  city: string | null;
+  category: string | null;
   website: string | null;
+  maps_url: string | null;
+  social_links: string[];
+  listed_at: string;
   status: string;
   discard_reason: string | null;
   score: number | null;

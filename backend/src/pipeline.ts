@@ -18,7 +18,7 @@ function integrationFor(operation:Operation):IntegrationSettings{
 }
 
 export async function processNext(){
-  if(processing)return false;const db=store.snapshot(),operation=db.operations.filter(item=>item.status==="queued"||item.status==="scheduled"&&!!item.scheduled_for&&new Date(item.scheduled_for)<=new Date()).sort((a,b)=>a.created_at.localeCompare(b.created_at))[0];if(!operation)return false;
+  if(processing)return false;const db=store.snapshot(),operation=db.operations.filter(item=>!item.archived_at&&(item.status==="queued"||item.status==="scheduled"&&!!item.scheduled_for&&new Date(item.scheduled_for)<=new Date())).sort((a,b)=>a.created_at.localeCompare(b.created_at))[0];if(!operation)return false;
   processing=true;try{await processOperation(operation.id)}finally{processing=false}return true;
 }
 
@@ -28,26 +28,34 @@ export async function processOperation(operationId:string){
   try{
     operation=store.snapshot().operations.find(item=>item.id===operationId)!;const integration=integrationFor(operation),candidates=await searchCompanies(operation.niche,operation.city,operation.target_count,integration);
     await store.mutate(db=>{const target=db.operations.find(item=>item.id===operationId)!;target.found_count=candidates.length;target.status="analyzing";target.current_stage="Analisando presença digital";target.updated_at=now();db.events.push(event(operationId,"search_completed",{found:candidates.length}))});
-    for(const candidate of candidates){
-      await store.mutate(db=>{const target=db.operations.find(item=>item.id===operationId)!;target.current_company_name=candidate.name;target.current_stage="Verificando presença digital";target.updated_at=now()});
-      await processCandidate(operationId,candidate,integration);
+    const preparedCandidates=[];
+    for(const candidate of candidates){const prepared=await prepareCandidate(operationId,candidate);if(prepared)preparedCandidates.push(prepared)}
+    for(const prepared of preparedCandidates){
+      await store.mutate(db=>{const target=db.operations.find(item=>item.id===operationId)!;target.current_company_id=prepared.company.id;target.current_company_name=prepared.company.name;target.current_stage="Verificando presença digital";target.updated_at=now()});
+      await processCandidate(operationId,prepared,integration);
     }
     await store.mutate(db=>{const target=db.operations.find(item=>item.id===operationId)!;const linkIds=db.operationCompanies.filter(item=>item.operation_id===operationId).map(item=>item.id),pending=db.messages.some(item=>linkIds.includes(item.operation_company_id)&&item.status==="pending_approval");target.status=pending?"awaiting_approval":"completed";target.current_company_id=null;target.current_company_name=null;target.current_stage=pending?"Aguardando aprovação das mensagens":"Operação concluída";target.finished_at=pending?null:now();target.updated_at=now();db.events.push(event(operationId,"operation_finished",{status:target.status}))});
   }catch(error){await store.mutate(db=>{const target=db.operations.find(item=>item.id===operationId);if(target){target.status="failed";target.current_stage="Operação interrompida";target.current_company_id=null;target.current_company_name=null;target.error_message=error instanceof Error?error.message:String(error);target.finished_at=now();target.updated_at=now();db.events.push(event(operationId,"operation_failed",{error:target.error_message}))}})}
 }
 
-async function processCandidate(operationId:string,candidate:SearchCandidate,integration:IntegrationSettings){
-  const prepared=await store.mutate(db=>{
+async function prepareCandidate(operationId:string,candidate:SearchCandidate){
+  return store.mutate(db=>{
     const operation=db.operations.find(item=>item.id===operationId)!;const candidateIds=identities(candidate);let company=db.companies.find(item=>item.organization_id===operation.organization_id&&item.identities.some(identity=>candidateIds.includes(identity)));
-    if(!company){const timestamp=now();company={id:id(),organization_id:operation.organization_id,name:candidate.name,normalized_name:normalizeText(candidate.name),phone:candidate.phone,address:candidate.address,city:candidate.city,category:candidate.category,website:candidate.website,source:"google_maps",source_id:candidate.source_id,identities:candidateIds,raw_data:{...candidate},first_seen_at:timestamp,prospected_at:null,prospected_operation_id:null,created_at:timestamp,updated_at:timestamp};db.companies.push(company)}
+    if(!company){const timestamp=now();company={id:id(),organization_id:operation.organization_id,name:candidate.name,normalized_name:normalizeText(candidate.name),phone:candidate.phone,other_phones:candidate.other_phones,email:candidate.email,address:candidate.address,city:candidate.city,category:candidate.category,website:candidate.website,maps_url:candidate.maps_url,social_links:candidate.social_links,source:"google_maps",source_id:candidate.source_id,identities:candidateIds,raw_data:candidate.raw_data,first_seen_at:timestamp,prospected_at:null,prospected_operation_id:null,archived_at:null,archived_by:null,created_at:timestamp,updated_at:timestamp};db.companies.push(company)}
+    else{company.phone ||= candidate.phone;company.other_phones=[...new Set([...company.other_phones,...candidate.other_phones])];company.email ||= candidate.email;company.address ||= candidate.address;company.city ||= candidate.city;company.category ||= candidate.category;company.website ||= candidate.website;company.maps_url ||= candidate.maps_url;company.social_links=[...new Set([...company.social_links,...candidate.social_links])];company.raw_data={...company.raw_data,...candidate.raw_data};company.updated_at=now()}
     if(db.operationCompanies.some(item=>item.operation_id===operationId&&item.company_id===company!.id))return null;
-    const timestamp=now(),link:OperationCompany={id:id(),organization_id:operation.organization_id,operation_id:operationId,company_id:company.id,status:"found",discard_reason:null,score:null,generated_site_url:null,final_message:null,created_at:timestamp,updated_at:timestamp};db.operationCompanies.push(link);operation.current_company_id=company.id;operation.current_company_name=company.name;operation.current_stage="Verificando presença digital";
+    const timestamp=now(),link:OperationCompany={id:id(),organization_id:operation.organization_id,operation_id:operationId,company_id:company.id,status:"found",discard_reason:null,score:null,generated_site_url:null,final_message:null,created_at:timestamp,updated_at:timestamp};db.operationCompanies.push(link);
     const previous=db.operationCompanies.some(item=>item.company_id===company!.id&&item.operation_id!==operationId&&item.status!=="failed");
     if(company.prospected_at||previous){link.status="blocked_history";link.discard_reason="Empresa já registrada em uma operação anterior";operation.blocked_count++;db.events.push(event(operationId,"company_blocked",{company:company.name},link.id));return null}
-    return {company:structuredClone(company),linkId:link.id};
-  });if(!prepared)return;
+    return {company:structuredClone(company),linkId:link.id,candidate};
+  });
+}
+
+async function processCandidate(operationId:string,prepared:{company:Company;linkId:string;candidate:SearchCandidate},integration:IntegrationSettings){
+  const candidate=prepared.candidate;
   try{
     const analysis=await analyzePresence(candidate);
+    await store.mutate(db=>{const company=db.companies.find(item=>item.id===prepared.company.id)!;company.email ||= analysis.discovered.emails[0]||null;company.other_phones=[...new Set([...company.other_phones,...analysis.discovered.phones])];company.social_links=[...new Set([...company.social_links,...analysis.discovered.socialLinks])];company.updated_at=now()});
     if(analysis.decision!=="eligible"){await store.mutate(db=>{const op=db.operations.find(item=>item.id===operationId)!,link=db.operationCompanies.find(item=>item.id===prepared.linkId)!;op.analyzed_count++;op.discarded_count++;link.score=analysis.score;link.status=analysis.decision;link.discard_reason="reason" in analysis.evidence?String(analysis.evidence.reason):"Empresa já possui presença digital suficiente";link.updated_at=now();db.events.push(event(operationId,"company_discarded",{company:prepared.company.name,reason:link.discard_reason},link.id))});return}
     await store.mutate(db=>{const op=db.operations.find(item=>item.id===operationId)!,link=db.operationCompanies.find(item=>item.id===prepared.linkId)!;op.analyzed_count++;op.current_stage="Gerando e publicando site";link.score=analysis.score;link.status="generating";link.updated_at=now()});
     const site=await createSite(candidate,integration),currentOperation=store.snapshot().operations.find(item=>item.id===operationId)!;const content=message(currentOperation.message_template,prepared.company,site.url);

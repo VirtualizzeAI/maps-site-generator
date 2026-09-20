@@ -32,6 +32,16 @@ class JsonStore {
       if(operation.current_company_id===undefined){operation.current_company_id=null;migrated=true}
       if(operation.current_company_name===undefined){operation.current_company_name=null;migrated=true}
       if(operation.current_stage===undefined){operation.current_stage=null;migrated=true}
+      if(operation.archived_at===undefined){operation.archived_at=null;migrated=true}
+      if(operation.archived_by===undefined){operation.archived_by=null;migrated=true}
+    }
+    for(const company of this.data.companies){
+      if(!Array.isArray(company.other_phones)){company.other_phones=[];migrated=true}
+      if(company.email===undefined){company.email=null;migrated=true}
+      if(company.maps_url===undefined){company.maps_url=null;migrated=true}
+      if(!Array.isArray(company.social_links)){company.social_links=[];migrated=true}
+      if(company.archived_at===undefined){company.archived_at=null;migrated=true}
+      if(company.archived_by===undefined){company.archived_by=null;migrated=true}
     }
     for(const message of this.data.messages){
       if(message.delivered_to===undefined){message.delivered_to=message.sent_at?message.recipient:null;migrated=true}
