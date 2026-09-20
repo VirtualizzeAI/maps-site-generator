@@ -24,6 +24,8 @@ npm start
 
 Para usar as integrações reais, configure as credenciais e defina `INTEGRATIONS_MODE=real`. A camada de armazenamento local será substituída pelo Supabase depois dos testes.
 
+Os sites enviados à Vercel são publicados como produção e o sistema salva o alias público (`*.vercel.app`), não a URL protegida de preview. Se a conta estiver configurada para proteger **todos** os deploys, altere o projeto para `Settings > Deployment Protection > Standard Protection` ou `None`; a Vercel aplica essa política acima da API de publicação.
+
 ## Modo global de teste do WhatsApp
 
 O modo pode ser alterado pela tela de configurações. Quando ativo, o destinatário é substituído no backend antes da chamada à Evolution API. A mensagem registra separadamente o telefone original, o número que recebeu o envio e se houve redirecionamento.

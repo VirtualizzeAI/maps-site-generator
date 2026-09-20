@@ -8,6 +8,54 @@ import type { IntegrationSettings, SearchCandidate } from "../types.js";
 const escape=(value:string)=>value.replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]!));
 const slugify=(value:string)=>normalizeText(value).replace(/\s+/g,"-").slice(0,100)||"site";
 
+type VercelDeployment = {
+  alias?: string[];
+  aliasAssigned?: boolean;
+  errorCode?: string;
+  errorMessage?: string;
+  id: string;
+  readyState?: "BUILDING"|"CANCELED"|"ERROR"|"INITIALIZING"|"QUEUED"|"READY";
+  target?: "production"|"staging"|null;
+  url: string;
+};
+
+const vercelHeaders=(token:string)=>({Authorization:`Bearer ${token}`,"Content-Type":"application/json"});
+const wait=(milliseconds:number)=>new Promise(resolve=>setTimeout(resolve,milliseconds));
+const absoluteUrl=(domain:string)=>domain.startsWith("http://")||domain.startsWith("https://")?domain:`https://${domain}`;
+
+export function publicDeploymentUrl(deployment:VercelDeployment,projectName:string){
+  const alias=deployment.alias?.find(domain=>domain.endsWith(".vercel.app"))||deployment.alias?.[0];
+  return absoluteUrl(alias||`${projectName}.vercel.app`);
+}
+
+export async function publishToVercel(slug:string,html:string,token:string,fetcher:typeof fetch=fetch){
+  const response=await fetcher("https://api.vercel.com/v13/deployments",{
+    method:"POST",
+    headers:vercelHeaders(token),
+    body:JSON.stringify({
+      name:slug,
+      files:[{file:"index.html",data:html}],
+      projectSettings:{framework:null},
+      target:"production",
+    }),
+  });
+  if(!response.ok)throw new Error(`Vercel retornou ${response.status}`);
+
+  let deployment=await response.json() as VercelDeployment;
+  for(let attempt=0;attempt<30&&deployment.readyState!=="READY";attempt+=1){
+    if(deployment.readyState==="ERROR"||deployment.readyState==="CANCELED"){
+      throw new Error(deployment.errorMessage||`Deploy da Vercel terminou como ${deployment.readyState}`);
+    }
+    await wait(1000);
+    const status=await fetcher(`https://api.vercel.com/v13/deployments/${deployment.id}`,{headers:vercelHeaders(token)});
+    if(!status.ok)throw new Error(`Vercel retornou ${status.status} ao consultar o deploy`);
+    deployment=await status.json() as VercelDeployment;
+  }
+  if(deployment.readyState!=="READY")throw new Error("O deploy da Vercel não ficou pronto dentro do tempo esperado");
+
+  return {url:publicDeploymentUrl(deployment,slug),deploymentId:deployment.id,slug};
+}
+
 export async function createSite(candidate:SearchCandidate,integration:IntegrationSettings){
   let html:string;
   if(config.mode==="mock"){
@@ -20,5 +68,7 @@ export async function createSite(candidate:SearchCandidate,integration:Integrati
   }
   const slug=`${slugify(candidate.name)}-${randomUUID().slice(0,8)}`,dir=path.join(sitesDir,slug),file=path.join(dir,"index.html");await mkdir(dir,{recursive:true});await writeFile(file,html,"utf8");
   if(config.mode==="mock")return {url:`${config.publicApiUrl}/generated/${slug}/`,deploymentId:null,slug};
-  const token=integration.vercel_token||config.vercelToken;if(!token)throw new Error("VERCEL_TOKEN não configurado");const response=await fetch("https://api.vercel.com/v13/deployments",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"},body:JSON.stringify({name:slug,files:[{file:"index.html",data:html}],projectSettings:{framework:null}})});if(!response.ok)throw new Error(`Vercel retornou ${response.status}`);const deployed=await response.json() as {url:string;id:string};return {url:`https://${deployed.url}`,deploymentId:deployed.id,slug};
+  const token=integration.vercel_token||config.vercelToken;
+  if(!token)throw new Error("VERCEL_TOKEN não configurado");
+  return publishToVercel(slug,html,token);
 }
