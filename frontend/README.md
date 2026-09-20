@@ -27,4 +27,4 @@ npm run dev
 3. Cadastre as variáveis de `.env.example`.
 4. Use o framework Next.js e publique.
 
-O navegador usa Supabase Auth/Realtime e chama a API Python pela URL configurada em `NEXT_PUBLIC_API_URL`.
+O navegador usa o token de autenticação emitido pela API Fastify e chama o backend Node.js pela URL configurada em `NEXT_PUBLIC_API_URL`. Nesta fase, o frontend não acessa Supabase nem qualquer banco diretamente.
