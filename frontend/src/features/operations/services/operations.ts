@@ -1,5 +1,5 @@
 import { apiRequest } from "@/services/api/client";
-import type { CreateOperationInput, Operation } from "../types";
+import type { CreateOperationInput, Operation, OperationDetail } from "../types";
 
 export function listOperations(accessToken: string, organizationId: string) {
   const query = new URLSearchParams({ organization_id: organizationId });
@@ -12,4 +12,8 @@ export function createOperation(accessToken: string, input: CreateOperationInput
     { method: "POST", body: JSON.stringify(input) },
     accessToken,
   );
+}
+
+export function getOperation(accessToken: string, operationId: string) {
+  return apiRequest<OperationDetail>(`/api/v1/operations/${operationId}`, {}, accessToken);
 }

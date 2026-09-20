@@ -23,3 +23,16 @@ npm start
 ```
 
 Para usar as integrações reais, configure as credenciais e defina `INTEGRATIONS_MODE=real`. A camada de armazenamento local será substituída pelo Supabase depois dos testes.
+
+## Modo global de teste do WhatsApp
+
+O modo pode ser alterado pela tela de configurações. Quando ativo, o destinatário é substituído no backend antes da chamada à Evolution API. A mensagem registra separadamente o telefone original, o número que recebeu o envio e se houve redirecionamento.
+
+Também pode ser definido inicialmente no `.env`:
+
+```env
+WHATSAPP_TEST_MODE=true
+WHATSAPP_TEST_NUMBER=5584999999999
+```
+
+Mudanças feitas pela interface ficam salvas no banco local e são usadas nas próximas mensagens.

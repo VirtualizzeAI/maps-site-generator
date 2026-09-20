@@ -25,6 +25,8 @@ export const config = {
   evolutionUrl: process.env.EVOLUTION_URL || "",
   evolutionApiKey: process.env.EVOLUTION_API_KEY || "",
   evolutionInstance: process.env.EVOLUTION_INSTANCE || "",
+  whatsappTestMode: process.env.WHATSAPP_TEST_MODE === "true",
+  whatsappTestNumber: process.env.WHATSAPP_TEST_NUMBER || "",
 };
 
 export const sitesDir = path.join(config.dataDir, "sites");

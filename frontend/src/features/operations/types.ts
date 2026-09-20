@@ -34,6 +34,28 @@ export interface Operation {
   sent_count: number;
   discarded_count: number;
   blocked_count: number;
+  current_company_id: string | null;
+  current_company_name: string | null;
+  current_stage: string | null;
+}
+
+export interface OperationCompany {
+  id: string;
+  company_id: string;
+  name: string;
+  phone: string | null;
+  website: string | null;
+  status: string;
+  discard_reason: string | null;
+  score: number | null;
+  generated_site_url: string | null;
+  final_message: string | null;
+  updated_at: string;
+}
+
+export interface OperationDetail extends Operation {
+  delivery: { test_mode: boolean; test_number: string | null };
+  companies: OperationCompany[];
 }
 
 export interface CreateOperationInput {

@@ -42,6 +42,17 @@ Senha: admin123
 
 O backend roda em `http://localhost:8000`. No modo padrão `mock`, todo o fluxo funciona localmente e os dados ficam em `backend/data/database.json`.
 
+## Acompanhamento das operações
+
+Cada linha do histórico abre a rota `/operations/[id]`, que atualiza automaticamente e mostra:
+
+- empresa e etapa atual do processamento;
+- empresas em análise, potenciais, descartadas e bloqueadas pelo histórico;
+- sites publicados, mensagens enviadas e progresso da operação;
+- aviso quando o modo global de teste do WhatsApp estiver ativo.
+
+O número de teste é configurado em **Configurações → Número global para testes**. Enquanto estiver ativo, o backend redireciona todos os envios para esse número e mantém o telefone original da empresa no histórico.
+
 ## Comandos
 
 | Aplicação | Desenvolvimento | Build | Produção |
