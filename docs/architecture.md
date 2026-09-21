@@ -6,7 +6,7 @@
 - `backend/`: Fastify e TypeScript, preparado para a VPS.
 - Cada pasta possui seu próprio `package.json`, dependências e deploy.
 
-## Backend local
+## Backend
 
 Um único processo Node.js executa:
 
@@ -14,10 +14,10 @@ Um único processo Node.js executa:
 - autenticação e controle de usuários;
 - worker das operações;
 - verificação das operações agendadas;
-- persistência JSON local;
+  - persistência PostgreSQL no Supabase;
 - hospedagem dos sites gerados no modo de teste.
 
-Essa decisão simplifica o desenvolvimento local. Depois dos testes, a camada `store.ts` será substituída por um repositório Supabase/PostgreSQL sem alterar os contratos da API ou o frontend.
+O Supabase Auth emite as sessões, mas toda autorização por organização e função continua sendo validada pela API. O frontend não acessa diretamente as tabelas. A primeira versão mantém um cache em memória sincronizado com PostgreSQL e deve executar em uma única instância do backend.
 
 ## Fluxo da operação
 

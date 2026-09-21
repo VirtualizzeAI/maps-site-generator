@@ -14,10 +14,11 @@ export const config = {
   dataDir: path.resolve(process.env.DATA_DIR || "./data"),
   mode: (process.env.INTEGRATIONS_MODE || "mock") as "mock" | "real",
   workerPollMs: number(process.env.WORKER_POLL_MS, 2000),
-  adminName: process.env.ADMIN_NAME || "Administrador",
-  adminEmail: process.env.ADMIN_EMAIL || "admin@virtualizze.com",
-  adminPassword: process.env.ADMIN_PASSWORD || "admin123",
-  organizationName: process.env.ORGANIZATION_NAME || "Virtualizze",
+  databaseUrl: process.env.DATABASE_URL || "",
+  databaseSsl: process.env.DATABASE_SSL !== "false",
+  supabaseUrl: process.env.SUPABASE_URL || "",
+  supabasePublishableKey: process.env.SUPABASE_PUBLISHABLE_KEY || "",
+  supabaseSecretKey: process.env.SUPABASE_SECRET_KEY || "",
   serperApiKey: process.env.SERPER_API_KEY || "",
   openaiApiKey: process.env.OPENAI_API_KEY || "",
   openaiModel: process.env.OPENAI_MODEL || "gpt-5-mini",
@@ -28,5 +29,18 @@ export const config = {
   whatsappTestMode: process.env.WHATSAPP_TEST_MODE === "true",
   whatsappTestNumber: process.env.WHATSAPP_TEST_NUMBER || "",
 };
+
+export function assertPersistenceConfig() {
+  const missing = [
+    ["DATABASE_URL", config.databaseUrl],
+    ["SUPABASE_URL", config.supabaseUrl],
+    ["SUPABASE_PUBLISHABLE_KEY", config.supabasePublishableKey],
+    ["SUPABASE_SECRET_KEY", config.supabaseSecretKey],
+  ]
+    .filter(([, value]) => !value)
+    .map(([name]) => name);
+  if (missing.length)
+    throw new Error(`Variáveis obrigatórias ausentes: ${missing.join(", ")}`);
+}
 
 export const sitesDir = path.join(config.dataDir, "sites");

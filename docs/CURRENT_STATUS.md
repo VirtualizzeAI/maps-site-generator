@@ -1,6 +1,6 @@
 # Estado atual do Maps Site Generator
 
-Última revisão: 20 de setembro de 2026.
+Última revisão: 21 de setembro de 2026.
 
 Este documento é o ponto de retomada para novas sessões de desenvolvimento. Antes de implementar algo, confirme o estado real do código e o histórico do Git.
 
@@ -20,7 +20,8 @@ maps-site-generator/
 - Frontend e backend possuem dependências e execução independentes.
 - Não há Python ou Docker.
 - API, worker e agendador rodam no mesmo processo do backend.
-- A persistência atual é `backend/data/database.json`.
+- A persistência em execução usa PostgreSQL no projeto Supabase `guesnbuiqaazvmkgctjt`.
+- A migration inicial está versionada em `supabase/migrations/`.
 - Sites gerados também são mantidos localmente em `backend/data/sites/`.
 - O frontend nunca acessa o banco diretamente.
 
@@ -28,7 +29,7 @@ maps-site-generator/
 
 ### Acesso e administração
 
-- Login local com token.
+- Login, renovação de sessão e criação de usuários com Supabase Auth.
 - Organizações, membros e perfis `admin`, `operator` e `viewer`.
 - Cadastro de usuários pelo painel.
 - Autorização validada no backend.
@@ -72,7 +73,7 @@ maps-site-generator/
   - OpenAI para gerar o HTML;
   - Vercel para publicação;
   - Evolution API para WhatsApp.
-- As chaves podem vir do `.env` ou da configuração local persistida.
+- As chaves secretas vêm exclusivamente do `.env` do backend; apenas opções não secretas ficam no banco.
 
 ### Segurança do teste de WhatsApp
 
@@ -141,12 +142,7 @@ Endereços:
 - API: `http://localhost:8000`;
 - saúde: `http://localhost:8000/health`.
 
-Login inicial local:
-
-```text
-E-mail: admin@virtualizze.com
-Senha: admin123
-```
+O acesso usa o administrador criado no Supabase Auth.
 
 ## Como validar
 
@@ -162,11 +158,8 @@ npm run build
 
 ## Limitações e riscos atuais
 
-- O JSON local é adequado apenas para testes e uma única instância do backend.
-- API, worker e agendador no mesmo processo não oferecem fila distribuída nem alta disponibilidade.
-- Credenciais salvas pela interface ficam no armazenamento local sem criptografia.
-- O login inicial possui senha conhecida e deve ser trocado antes de qualquer publicação.
-- Não existem ainda migrations definitivas do Supabase para o modelo atualmente validado.
+- O cache de persistência, a API, o worker e o agendador permanecem no mesmo processo; por isso o MVP deve rodar em apenas uma instância do backend.
+- Ainda não há fila distribuída nem alta disponibilidade.
 - Retentativas, idempotência e recuperação de falhas externas ainda precisam ser fortalecidas.
 - A estratégia atual cria um projeto/deploy da Vercel para cada site; isso deve ser reavaliado antes de escalar o volume.
 - O backend ainda não possui processo definitivo de deploy, monitoramento e execução contínua na VPS.
@@ -177,9 +170,8 @@ npm run build
 2. Confirmar link público, aprovação e entrega pela Evolution API.
 3. Revisar estados de falha, retentativas e retomada de operações interrompidas.
 4. Definir a estratégia de publicação em escala na Vercel.
-5. Consolidar o modelo validado em migrations do Supabase/PostgreSQL.
-6. Substituir autenticação e repositório locais pelas implementações do Supabase.
-7. Preparar deploy do backend na VPS com processo persistente, logs e monitoramento.
+5. Configurar as variáveis do Supabase no backend e executar o teste integrado.
+6. Preparar deploy do backend na VPS com processo persistente, logs e monitoramento.
 
 ## Decisões que não devem ser presumidas
 

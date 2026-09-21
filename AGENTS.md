@@ -31,7 +31,7 @@ O Maps Site Generator é um sistema da Virtualizze que:
 - Manter `frontend/` e `backend/` como aplicações independentes.
 - Usar somente Node.js e TypeScript. Não introduzir Python ou Docker sem nova decisão explícita.
 - O frontend acessa dados apenas pela API própria do backend.
-- Manter os dados em JSON local nesta fase. A migração para Supabase será feita somente após os testes locais.
+- Persistir autenticação e dados no Supabase; o frontend continua acessando dados somente pela API própria.
 - Validar autenticação, organização, função do usuário e acesso ao registro no backend.
 - Preservar a deduplicação de empresas entre operações.
 - Arquivar empresas e operações não remove suas identidades do histórico.
@@ -94,8 +94,8 @@ Execute `npm install` apenas quando dependências ou o lockfile mudarem.
 - Ao terminar, informe arquivos alterados, validações realizadas e riscos ou decisões pendentes.
 - Atualize `docs/CURRENT_STATUS.md` quando uma mudança alterar funcionalidade, arquitetura, integrações, limitações ou próximos passos.
 
-## Dados locais
+## Dados e arquivos locais
 
 - Arquivar não significa apagar definitivamente.
-- Para um teste completamente limpo, pare o backend e renomeie `backend/data/database.json`; mantenha o arquivo antigo como backup.
-- Nunca versione `backend/data/`.
+- O PostgreSQL do Supabase é a fonte persistente dos dados operacionais.
+- `backend/data/sites/` pode conter sites gerados no modo `mock` e nunca deve ser versionado.

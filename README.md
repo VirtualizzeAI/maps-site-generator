@@ -33,14 +33,9 @@ npm install
 npm run dev
 ```
 
-Acesse `http://localhost:3000` com:
+Acesse `http://localhost:3000` com o usuário administrador criado no Supabase Auth.
 
-```text
-E-mail: admin@virtualizze.com
-Senha: admin123
-```
-
-O backend roda em `http://localhost:8000`. No modo padrão `mock`, todo o fluxo funciona localmente e os dados ficam em `backend/data/database.json`.
+O backend roda em `http://localhost:8000`. Mesmo no modo de integrações `mock`, os dados operacionais são persistidos no PostgreSQL do Supabase.
 
 ## Acompanhamento das operações
 
@@ -62,4 +57,4 @@ O número de teste é configurado em **Configurações → Número global para t
 | Frontend | `npm run dev` | `npm run build` | `npm start` |
 | Backend | `npm run dev` | `npm run build` | `npm start` |
 
-Antes de publicar, troque a senha administrativa e configure as variáveis de ambiente.
+Antes de publicar, configure as variáveis de ambiente do Supabase e das integrações no backend.

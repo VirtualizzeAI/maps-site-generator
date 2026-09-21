@@ -1,4 +1,4 @@
-import { apiRequest, saveToken } from "@/services/api/client";
+import { apiRequest, saveSession } from "@/services/api/client";
 
 export interface CurrentUser {
   id: string;
@@ -8,10 +8,15 @@ export interface CurrentUser {
 }
 
 export async function login(email: string, password: string) {
-  const response = await apiRequest<{ access_token: string; user: CurrentUser }>("/api/v1/auth/login", {
-    method: "POST", body: JSON.stringify({ email, password }),
+  const response = await apiRequest<{
+    access_token: string;
+    refresh_token: string;
+    user: CurrentUser;
+  }>("/api/v1/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
   });
-  saveToken(response.access_token);
+  saveSession(response.access_token, response.refresh_token);
   return response.user;
 }
 

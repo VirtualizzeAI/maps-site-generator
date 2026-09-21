@@ -2,43 +2,1372 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Activity, Building2, Check, ExternalLink, Gauge, Globe2, Loader2, LogOut, Mail, MapPin, Menu, MessageSquareText, Phone, Play, Radar, Settings, ShieldCheck, Trash2, Users, X } from "lucide-react";
+import {
+  Activity,
+  Building2,
+  Check,
+  ExternalLink,
+  Gauge,
+  Globe2,
+  Loader2,
+  LogOut,
+  Mail,
+  MapPin,
+  Menu,
+  MessageSquareText,
+  Phone,
+  Play,
+  Radar,
+  Settings,
+  ShieldCheck,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
 import { apiRequest, clearToken, getToken } from "@/services/api/client";
 import { me, type CurrentUser } from "@/services/auth";
-import { createOperation, listOperations } from "@/features/operations/services/operations";
+import {
+  createOperation,
+  listOperations,
+} from "@/features/operations/services/operations";
 import type { ApprovalMode, Operation } from "@/features/operations/types";
 
-type View = "overview" | "operations" | "companies" | "reviews" | "users" | "settings";
-type Summary = { companies:number; operations:number; sites_generated:number; messages_sent:number; discarded:number; blocked:number; pending_approval:number; running_operation_id:string|null };
-type CompanyOperation = { id:string; niche:string; city:string; status:string; listed_at:string; generated_site_url:string|null };
-type Company = { id:string; name:string; phone:string|null; other_phones:string[]; email:string|null; address:string|null; city:string|null; category:string|null; website:string|null; maps_url:string|null; social_links:string[]; prospected_at:string|null; first_seen_at:string; created_at:string; operations:CompanyOperation[] };
-type Message = { id:string; company_name:string; recipient:string; delivery_recipient:string; test_mode:boolean; content:string; status:string; site_url:string|null; created_at:string };
-type Integration = { mode:string; serper_configured:boolean; openai_configured:boolean; openai_model:string; vercel_configured:boolean; evolution_configured:boolean; evolution_url:string|null; evolution_instance:string|null; whatsapp_test_mode:boolean; whatsapp_test_number:string };
-type TeamUser = { id:string; name:string; email:string; role:string; active:boolean; created_at:string };
+type View =
+  "overview" | "operations" | "companies" | "reviews" | "users" | "settings";
+type Summary = {
+  companies: number;
+  operations: number;
+  sites_generated: number;
+  messages_sent: number;
+  discarded: number;
+  blocked: number;
+  pending_approval: number;
+  running_operation_id: string | null;
+};
+type CompanyOperation = {
+  id: string;
+  niche: string;
+  city: string;
+  status: string;
+  listed_at: string;
+  generated_site_url: string | null;
+};
+type Company = {
+  id: string;
+  name: string;
+  phone: string | null;
+  other_phones: string[];
+  email: string | null;
+  address: string | null;
+  city: string | null;
+  category: string | null;
+  website: string | null;
+  maps_url: string | null;
+  social_links: string[];
+  prospected_at: string | null;
+  first_seen_at: string;
+  created_at: string;
+  operations: CompanyOperation[];
+};
+type Message = {
+  id: string;
+  company_name: string;
+  recipient: string;
+  delivery_recipient: string;
+  test_mode: boolean;
+  content: string;
+  status: string;
+  site_url: string | null;
+  created_at: string;
+};
+type Integration = {
+  mode: string;
+  serper_configured: boolean;
+  openai_configured: boolean;
+  openai_model: string;
+  vercel_configured: boolean;
+  evolution_configured: boolean;
+  evolution_url: string | null;
+  evolution_instance: string | null;
+  whatsapp_test_mode: boolean;
+  whatsapp_test_number: string;
+};
+type TeamUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  active: boolean;
+  created_at: string;
+};
 
-const labels:Record<string,string>={queued:"Na fila",scheduled:"Agendada",searching:"Buscando",analyzing:"Analisando",generating:"Gerando site",deploying:"Publicando",sending:"Enviando",awaiting_approval:"Aguardando revisão",completed:"Concluída",failed:"Falhou"};
-const template="Olá! Criei uma demonstração de site para a {{empresa}}. Veja aqui: {{link}}. Se gostar, posso explicar como colocamos no ar para você.";
+const labels: Record<string, string> = {
+  queued: "Na fila",
+  scheduled: "Agendada",
+  searching: "Buscando",
+  analyzing: "Analisando",
+  generating: "Gerando site",
+  deploying: "Publicando",
+  sending: "Enviando",
+  awaiting_approval: "Aguardando revisão",
+  completed: "Concluída",
+  failed: "Falhou",
+};
+const template =
+  "Olá! Criei uma demonstração de site para a {{empresa}}. Veja aqui: {{link}}. Se gostar, posso explicar como colocamos no ar para você.";
 
-export function DashboardPage(){
- const router=useRouter(); const [user,setUser]=useState<CurrentUser|null>(null),[view,setView]=useState<View>("overview"),[loading,setLoading]=useState(true),[menu,setMenu]=useState(false),[newOpen,setNewOpen]=useState(false); const [summary,setSummary]=useState<Summary|null>(null),[operations,setOperations]=useState<Operation[]>([]),[companies,setCompanies]=useState<Company[]>([]),[messages,setMessages]=useState<Message[]>([]),[integration,setIntegration]=useState<Integration|null>(null),[team,setTeam]=useState<TeamUser[]>([]),[error,setError]=useState(""); const token=getToken(),org=user?.organizations[0];
- const refresh=useCallback(async(u:CurrentUser,t:string)=>{const id=u.organizations[0]?.id;if(!id)return;try{const q=new URLSearchParams({organization_id:id});const [s,o,c,m,i,users]=await Promise.all([apiRequest<Summary>(`/api/v1/dashboard/summary?${q}`,{},t),listOperations(t,id),apiRequest<Company[]>(`/api/v1/companies?${q}`,{},t),apiRequest<Message[]>(`/api/v1/messages?${q}`,{},t),apiRequest<Integration>(`/api/v1/integrations?${q}`,{},t),apiRequest<TeamUser[]>(`/api/v1/users?${q}`,{},t)]);setSummary(s);setOperations(o);setCompanies(c);setMessages(m);setIntegration(i);setTeam(users);setError("")}catch(e){setError(e instanceof Error?e.message:"Falha ao carregar")}},[]);
- useEffect(()=>{if(!token){router.replace("/login");return}me(token).then(u=>{setUser(u);return refresh(u,token)}).catch(()=>{clearToken();router.replace("/login")}).finally(()=>setLoading(false))},[router,refresh,token]);
- useEffect(()=>{if(!user||!token)return;const id=setInterval(()=>refresh(user,token),3000);return()=>clearInterval(id)},[user,token,refresh]);
- if(loading)return <div className="grid min-h-screen place-items-center bg-[#07111f] text-cyan-300"><Loader2 className="animate-spin"/></div>; if(!user||!org||!token)return null;
- const nav:[View,string,React.ElementType][]=[["overview","Visão geral",Gauge],["operations","Operações",Activity],["companies","Empresas",Building2],["reviews","Aprovações",MessageSquareText],["users","Usuários",Users],["settings","Configurações",Settings]];
- return <div className="min-h-screen bg-[#f4f7fb] text-slate-900"><aside className={`fixed inset-y-0 left-0 z-40 w-64 border-r border-white/10 bg-[#07111f] p-5 text-white transition-transform lg:translate-x-0 ${menu?"translate-x-0":"-translate-x-full"}`}><div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-500"><Radar size={21}/></div><div><b>Virtualizze</b><p className="text-xs text-cyan-300">Prospector</p></div></div><nav className="mt-10 space-y-2">{nav.map(([id,label,Icon])=><button key={id} onClick={()=>{setView(id);setMenu(false)}} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm ${view===id?"bg-blue-500":"text-slate-400 hover:bg-white/5 hover:text-white"}`}><Icon size={18}/>{label}{id==="reviews"&&summary?.pending_approval?<span className="ml-auto rounded-full bg-cyan-300 px-2 text-xs text-slate-950">{summary.pending_approval}</span>:null}</button>)}</nav><div className="absolute bottom-5 left-5 right-5 rounded-xl bg-white/5 p-3"><p className="truncate text-sm font-medium">{user.name}</p><p className="truncate text-xs text-slate-400">{user.email}</p><button onClick={()=>{clearToken();router.replace("/login")}} className="mt-3 flex items-center gap-2 text-xs text-slate-400 hover:text-white"><LogOut size={14}/>Sair</button></div></aside>
- <main className="min-h-screen lg:ml-64"><header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white/90 px-5 backdrop-blur lg:px-8"><button className="lg:hidden" onClick={()=>setMenu(true)}><Menu/></button><div><h1 className="font-semibold">{nav.find(n=>n[0]===view)?.[1]}</h1><p className="hidden text-xs text-slate-500 sm:block">{org.name} · dados locais</p></div><button onClick={()=>setNewOpen(true)} className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white"><Play size={16}/>Nova operação</button></header><div className="p-5 lg:p-8">{error&&<div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}{view==="overview"&&<Overview summary={summary} operations={operations} refresh={()=>refresh(user,token)} onError={setError}/>} {view==="operations"&&<Operations operations={operations} refresh={()=>refresh(user,token)} onError={setError}/>} {view==="companies"&&<Companies companies={companies} refresh={()=>refresh(user,token)} onError={setError}/>} {view==="reviews"&&<Reviews messages={messages.filter(m=>m.status==="pending_approval")} token={token} refresh={()=>refresh(user,token)}/>} {view==="users"&&<Team users={team} org={org.id} token={token} refresh={()=>refresh(user,token)}/>} {view==="settings"&&<Integrations integration={integration} org={org.id} token={token} refresh={()=>refresh(user,token)}/>}</div></main>{newOpen&&<NewOperation org={org.id} token={token} close={()=>setNewOpen(false)} done={()=>{setNewOpen(false);refresh(user,token);setView("operations")}}/>}</div>
+export function DashboardPage() {
+  const router = useRouter();
+  const [user, setUser] = useState<CurrentUser | null>(null),
+    [view, setView] = useState<View>("overview"),
+    [loading, setLoading] = useState(true),
+    [menu, setMenu] = useState(false),
+    [newOpen, setNewOpen] = useState(false);
+  const [summary, setSummary] = useState<Summary | null>(null),
+    [operations, setOperations] = useState<Operation[]>([]),
+    [companies, setCompanies] = useState<Company[]>([]),
+    [messages, setMessages] = useState<Message[]>([]),
+    [integration, setIntegration] = useState<Integration | null>(null),
+    [team, setTeam] = useState<TeamUser[]>([]),
+    [error, setError] = useState("");
+  const token = getToken(),
+    org = user?.organizations[0];
+  const refresh = useCallback(async (u: CurrentUser, t: string) => {
+    const id = u.organizations[0]?.id;
+    if (!id) return;
+    try {
+      const q = new URLSearchParams({ organization_id: id });
+      const [s, o, c, m, i, users] = await Promise.all([
+        apiRequest<Summary>(`/api/v1/dashboard/summary?${q}`, {}, t),
+        listOperations(t, id),
+        apiRequest<Company[]>(`/api/v1/companies?${q}`, {}, t),
+        apiRequest<Message[]>(`/api/v1/messages?${q}`, {}, t),
+        apiRequest<Integration>(`/api/v1/integrations?${q}`, {}, t),
+        apiRequest<TeamUser[]>(`/api/v1/users?${q}`, {}, t),
+      ]);
+      setSummary(s);
+      setOperations(o);
+      setCompanies(c);
+      setMessages(m);
+      setIntegration(i);
+      setTeam(users);
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao carregar");
+    }
+  }, []);
+  useEffect(() => {
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+    me(token)
+      .then((u) => {
+        setUser(u);
+        return refresh(u, token);
+      })
+      .catch(() => {
+        clearToken();
+        router.replace("/login");
+      })
+      .finally(() => setLoading(false));
+  }, [router, refresh, token]);
+  useEffect(() => {
+    if (!user || !token) return;
+    const id = setInterval(() => refresh(user, token), 3000);
+    return () => clearInterval(id);
+  }, [user, token, refresh]);
+  if (loading)
+    return (
+      <div className="grid min-h-screen place-items-center bg-[#07111f] text-cyan-300">
+        <Loader2 className="animate-spin" />
+      </div>
+    );
+  if (!user || !org || !token) return null;
+  const nav: [View, string, React.ElementType][] = [
+    ["overview", "Visão geral", Gauge],
+    ["operations", "Operações", Activity],
+    ["companies", "Empresas", Building2],
+    ["reviews", "Aprovações", MessageSquareText],
+    ["users", "Usuários", Users],
+    ["settings", "Configurações", Settings],
+  ];
+  return (
+    <div className="min-h-screen bg-[#f4f7fb] text-slate-900">
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-64 border-r border-white/10 bg-[#07111f] p-5 text-white transition-transform lg:translate-x-0 ${menu ? "translate-x-0" : "-translate-x-full"}`}
+      >
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-500">
+            <Radar size={21} />
+          </div>
+          <div>
+            <b>Virtualizze</b>
+            <p className="text-xs text-cyan-300">Prospector</p>
+          </div>
+        </div>
+        <nav className="mt-10 space-y-2">
+          {nav.map(([id, label, Icon]) => (
+            <button
+              key={id}
+              onClick={() => {
+                setView(id);
+                setMenu(false);
+              }}
+              className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm ${view === id ? "bg-blue-500" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}
+            >
+              <Icon size={18} />
+              {label}
+              {id === "reviews" && summary?.pending_approval ? (
+                <span className="ml-auto rounded-full bg-cyan-300 px-2 text-xs text-slate-950">
+                  {summary.pending_approval}
+                </span>
+              ) : null}
+            </button>
+          ))}
+        </nav>
+        <div className="absolute bottom-5 left-5 right-5 rounded-xl bg-white/5 p-3">
+          <p className="truncate text-sm font-medium">{user.name}</p>
+          <p className="truncate text-xs text-slate-400">{user.email}</p>
+          <button
+            onClick={() => {
+              clearToken();
+              router.replace("/login");
+            }}
+            className="mt-3 flex items-center gap-2 text-xs text-slate-400 hover:text-white"
+          >
+            <LogOut size={14} />
+            Sair
+          </button>
+        </div>
+      </aside>
+      <main className="min-h-screen lg:ml-64">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white/90 px-5 backdrop-blur lg:px-8">
+          <button className="lg:hidden" onClick={() => setMenu(true)}>
+            <Menu />
+          </button>
+          <div>
+            <h1 className="font-semibold">
+              {nav.find((n) => n[0] === view)?.[1]}
+            </h1>
+            <p className="hidden text-xs text-slate-500 sm:block">
+              {org.name} · Supabase
+            </p>
+          </div>
+          <button
+            onClick={() => setNewOpen(true)}
+            className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white"
+          >
+            <Play size={16} />
+            Nova operação
+          </button>
+        </header>
+        <div className="p-5 lg:p-8">
+          {error && (
+            <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+          {view === "overview" && (
+            <Overview
+              summary={summary}
+              operations={operations}
+              refresh={() => refresh(user, token)}
+              onError={setError}
+            />
+          )}{" "}
+          {view === "operations" && (
+            <Operations
+              operations={operations}
+              refresh={() => refresh(user, token)}
+              onError={setError}
+            />
+          )}{" "}
+          {view === "companies" && (
+            <Companies
+              companies={companies}
+              refresh={() => refresh(user, token)}
+              onError={setError}
+            />
+          )}{" "}
+          {view === "reviews" && (
+            <Reviews
+              messages={messages.filter((m) => m.status === "pending_approval")}
+              token={token}
+              refresh={() => refresh(user, token)}
+            />
+          )}{" "}
+          {view === "users" && (
+            <Team
+              users={team}
+              org={org.id}
+              token={token}
+              refresh={() => refresh(user, token)}
+            />
+          )}{" "}
+          {view === "settings" && (
+            <Integrations
+              integration={integration}
+              org={org.id}
+              token={token}
+              refresh={() => refresh(user, token)}
+            />
+          )}
+        </div>
+      </main>
+      {newOpen && (
+        <NewOperation
+          org={org.id}
+          token={token}
+          close={() => setNewOpen(false)}
+          done={() => {
+            setNewOpen(false);
+            refresh(user, token);
+            setView("operations");
+          }}
+        />
+      )}
+    </div>
+  );
 }
 
-function Card({title,value,icon:Icon,tone}:{title:string;value:number;icon:React.ElementType;tone:string}){return <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex justify-between"><div><p className="text-sm text-slate-500">{title}</p><p className="mt-2 text-3xl font-bold">{value}</p></div><span className={`h-fit rounded-xl p-2.5 ${tone}`}><Icon size={20}/></span></div></div>}
-function Overview({summary,operations,refresh,onError}:{summary:Summary|null;operations:Operation[];refresh:()=>Promise<void>;onError:(message:string)=>void}){const active=operations.find(o=>!["completed","failed"].includes(o.status));return <><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Card title="Empresas no histórico" value={summary?.companies||0} icon={Building2} tone="bg-blue-50 text-blue-600"/><Card title="Sites criados" value={summary?.sites_generated||0} icon={Globe2} tone="bg-cyan-50 text-cyan-600"/><Card title="Mensagens enviadas" value={summary?.messages_sent||0} icon={MessageSquareText} tone="bg-emerald-50 text-emerald-600"/><Card title="Bloqueadas pelo histórico" value={summary?.blocked||0} icon={ShieldCheck} tone="bg-violet-50 text-violet-600"/></div>{active&&<section className="mt-6 rounded-2xl bg-[#0b1b2d] p-6 text-white"><div className="flex items-center gap-3"><span className="relative flex h-3 w-3"><span className="absolute h-full w-full animate-ping rounded-full bg-cyan-300"/><span className="relative h-3 w-3 rounded-full bg-cyan-400"/></span><b>Operação em andamento</b></div><h2 className="mt-5 text-2xl font-bold">{active.niche} em {active.city}</h2><p className="mt-1 text-sm text-slate-400">{labels[active.status]||active.status} · {active.found_count}/{active.target_count} encontradas · {active.sent_count} envios</p><div className="mt-5 h-2 overflow-hidden rounded bg-white/10"><div className="h-full bg-cyan-400" style={{width:`${Math.min(100,active.analyzed_count/Math.max(active.target_count,1)*100)}%`}}/></div></section>}<section className="mt-6"><h2 className="mb-3 font-semibold">Operações recentes</h2><OperationTable rows={operations.slice(0,6)} refresh={refresh} onError={onError}/></section></>}
-function Operations({operations,refresh,onError}:{operations:Operation[];refresh:()=>Promise<void>;onError:(message:string)=>void}){return <><div className="mb-5"><h2 className="text-xl font-bold">Histórico de operações</h2><p className="text-sm text-slate-500">Execuções manuais e agendadas, com contadores persistidos.</p></div><OperationTable rows={operations} refresh={refresh} onError={onError}/></>}
-function OperationTable({rows,refresh,onError}:{rows:Operation[];refresh:()=>Promise<void>;onError:(message:string)=>void}){const router=useRouter(),token=getToken(),canArchive=useCanArchive(),[busy,setBusy]=useState("");async function archive(operation:Operation,event:React.MouseEvent){event.stopPropagation();if(!token||!window.confirm("Arquivar esta operação? O histórico das empresas será preservado."))return;setBusy(operation.id);try{await apiRequest(`/api/v1/operations/${operation.id}`,{method:"DELETE"},token);await refresh()}catch(reason){onError(reason instanceof Error?reason.message:"Não foi possível arquivar a operação")}finally{setBusy("")}}return <div className="overflow-x-auto rounded-2xl border bg-white"><table className="w-full min-w-[820px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="p-4">Operação</th><th>Status</th><th>Encontradas</th><th>Sites</th><th>Enviadas</th><th>Data</th>{canArchive&&<th className="pr-4 text-right">Ações</th>}</tr></thead><tbody>{rows.map(o=><tr key={o.id} tabIndex={0} role="link" onClick={()=>router.push(`/operations/${o.id}`)} onKeyDown={event=>{if(event.key==="Enter"||event.key===" ")router.push(`/operations/${o.id}`)}} className="cursor-pointer border-t outline-none transition hover:bg-blue-50/60 focus:bg-blue-50"><td className="p-4"><b>{o.niche}</b><p className="text-xs text-slate-500">{o.city} · {o.approval_mode==="automatic"?"Automático":"Revisão humana"}</p></td><td><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${o.status==="completed"?"bg-emerald-50 text-emerald-700":o.status==="failed"?"bg-red-50 text-red-700":"bg-blue-50 text-blue-700"}`}>{labels[o.status]||o.status}</span></td><td>{o.found_count}/{o.target_count}</td><td>{o.generated_count}</td><td>{o.sent_count}</td><td>{new Date(o.created_at).toLocaleString("pt-BR")}</td>{canArchive&&<td className="pr-4 text-right"><button disabled={busy===o.id} title="Arquivar operação" onClick={event=>archive(o,event)} className="rounded-lg p-2 text-red-600 hover:bg-red-50 disabled:opacity-50">{busy===o.id?<Loader2 className="animate-spin" size={16}/>:<Trash2 size={16}/>}</button></td>}</tr>)}{!rows.length&&<tr><td colSpan={canArchive?7:6} className="p-10 text-center text-slate-500">Nenhuma operação criada.</td></tr>}</tbody></table></div>}
-function Companies({companies,refresh,onError}:{companies:Company[];refresh:()=>Promise<void>;onError:(message:string)=>void}){const token=getToken(),canArchive=useCanArchive(),[busy,setBusy]=useState(""),[selected,setSelected]=useState<string[]>([]),[archivingSelected,setArchivingSelected]=useState(false),selectedCompanies=companies.filter(company=>selected.includes(company.id)),allSelected=companies.length>0&&selectedCompanies.length===companies.length;function toggle(companyId:string){setSelected(current=>current.includes(companyId)?current.filter(id=>id!==companyId):[...current,companyId])}async function archive(company:Company){if(!token||!window.confirm(`Arquivar ${company.name}? O registro continuará bloqueando novas prospecções.`))return;setBusy(company.id);try{await apiRequest(`/api/v1/companies/${company.id}`,{method:"DELETE"},token);setSelected(current=>current.filter(id=>id!==company.id));await refresh()}catch(reason){onError(reason instanceof Error?reason.message:"Não foi possível arquivar a empresa")}finally{setBusy("")}}async function archiveSelected(){if(!token||!selectedCompanies.length||!window.confirm(`Arquivar ${selectedCompanies.length} empresa${selectedCompanies.length===1?"":"s"}? Os registros continuarão bloqueando novas prospecções.`))return;setArchivingSelected(true);try{for(const company of selectedCompanies)await apiRequest(`/api/v1/companies/${company.id}`,{method:"DELETE"},token);setSelected([]);await refresh()}catch(reason){onError(reason instanceof Error?reason.message:"Não foi possível arquivar as empresas selecionadas");await refresh()}finally{setArchivingSelected(false)}}return <><div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Empresas</h2><p className="text-sm text-slate-500">Histórico global de empresas encontradas nas operações.</p></div>{canArchive&&companies.length>0&&<div className="flex flex-wrap items-center gap-3"><label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={allSelected} onChange={event=>setSelected(event.target.checked?companies.map(company=>company.id):[])} className="h-4 w-4 accent-blue-600"/>Selecionar todas</label>{selectedCompanies.length>0&&<button disabled={archivingSelected||!!busy} onClick={archiveSelected} className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">{archivingSelected?<Loader2 className="animate-spin" size={16}/>:<Trash2 size={16}/>}Arquivar selecionadas ({selectedCompanies.length})</button>}</div>}</div><div className="grid gap-4 xl:grid-cols-2">{companies.map(company=>{const isSelected=selected.includes(company.id);return <article key={company.id} className={`rounded-2xl border bg-white p-5 shadow-sm ${isSelected?"border-blue-400 ring-2 ring-blue-100":""}`}><div className="flex items-start justify-between gap-4">{canArchive&&<label className="mt-1 flex cursor-pointer items-center gap-2"><input type="checkbox" checked={isSelected} onChange={()=>toggle(company.id)} aria-label={`Selecionar ${company.name}`} className="h-4 w-4 accent-blue-600"/></label>}<div className="min-w-0 flex-1"><h2 className="font-bold">{company.name}</h2><p className="mt-1 text-sm text-slate-500">{company.category||"Segmento não informado"} · {company.city||"Cidade não informada"}</p></div>{canArchive&&<button disabled={busy===company.id||archivingSelected} title="Arquivar empresa" onClick={()=>archive(company)} className="rounded-lg p-2 text-red-600 hover:bg-red-50 disabled:opacity-50">{busy===company.id?<Loader2 className="animate-spin" size={17}/>:<Trash2 size={17}/>}</button>}</div><div className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">{company.address&&<p className="flex gap-2"><MapPin className="mt-0.5 shrink-0" size={15}/>{company.address}</p>}<div>{company.phone&&<p className="flex items-center gap-2"><Phone size={15}/>{company.phone}</p>}{company.other_phones.map(phone=><p key={phone} className="ml-6 text-xs">{phone}</p>)}</div>{company.email&&<p className="flex items-center gap-2"><Mail size={15}/>{company.email}</p>}<p>Pesquisada em {new Date(company.first_seen_at).toLocaleString("pt-BR")}</p></div><div className="mt-4 flex flex-wrap gap-3 text-xs font-semibold">{company.maps_url&&<a target="_blank" rel="noreferrer" href={company.maps_url} className="text-blue-600">Google Maps</a>}{company.website&&<a target="_blank" rel="noreferrer" href={company.website} className="text-blue-600">Site original</a>}{company.social_links.map((link,index)=><a key={link} target="_blank" rel="noreferrer" href={link} className="text-blue-600">Rede social {index+1}</a>)}</div><div className="mt-4 border-t pt-4"><p className="text-xs font-semibold uppercase text-slate-400">Operações em que foi listada</p><div className="mt-2 space-y-2">{company.operations.map(operation=><div key={operation.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 p-2 text-xs"><button onClick={()=>window.location.assign(`/operations/${operation.id}`)} className="text-left font-semibold text-slate-700 hover:text-blue-600">{operation.niche} em {operation.city}<span className="ml-2 font-normal text-slate-400">{new Date(operation.listed_at).toLocaleString("pt-BR")}</span></button>{operation.generated_site_url&&<a href={operation.generated_site_url} target="_blank" rel="noreferrer" className="text-emerald-600">Site gerado</a>}</div>)}</div></div></article>})}{!companies.length&&<div className="col-span-full rounded-2xl border border-dashed bg-white p-12 text-center text-slate-500">Nenhuma empresa no histórico.</div>}</div></>}
-function Reviews({messages,token,refresh}:{messages:Message[];token:string;refresh:()=>void}){const [busy,setBusy]=useState("");async function approve(id:string){setBusy(id);await apiRequest(`/api/v1/messages/${id}/approve`,{method:"POST",body:"{}"},token);await refresh();setBusy("")}return <div className="space-y-4">{messages.map(m=><article key={m.id} className="rounded-2xl border bg-white p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-bold">{m.company_name}</h3><p className="text-sm text-slate-500">Telefone da empresa: {m.recipient}</p>{m.test_mode&&<p className="mt-1 text-xs font-semibold text-amber-700">Modo de teste: envio realizado para {m.delivery_recipient}</p>}</div>{m.site_url&&<a className="flex items-center gap-1 text-sm text-blue-600" target="_blank" rel="noreferrer" href={m.site_url}>Ver site <ExternalLink size={14}/></a>}</div><p className="my-5 rounded-xl bg-slate-50 p-4 text-sm leading-6">{m.content}</p><button disabled={busy===m.id} onClick={()=>approve(m.id)} className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">{busy===m.id?<Loader2 className="animate-spin" size={16}/>:<Check size={16}/>}Aprovar e enviar</button></article>)}{!messages.length&&<Empty/>}</div>}
-function Team({users,org,token,refresh}:{users:TeamUser[];org:string;token:string;refresh:()=>void}){const [form,setForm]=useState({name:"",email:"",password:"",role:"operator"}),[busy,setBusy]=useState(false);async function submit(e:FormEvent){e.preventDefault();setBusy(true);await apiRequest("/api/v1/users",{method:"POST",body:JSON.stringify({...form,organization_id:org})},token);setForm({name:"",email:"",password:"",role:"operator"});await refresh();setBusy(false)}return <div className="grid gap-6 xl:grid-cols-[1fr_360px]"><div className="overflow-hidden rounded-2xl border bg-white"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="p-4">Usuário</th><th>Perfil</th><th>Status</th></tr></thead><tbody>{users.map(u=><tr key={u.id} className="border-t"><td className="p-4"><b>{u.name}</b><p className="text-xs text-slate-500">{u.email}</p></td><td>{u.role}</td><td className={u.active?"text-emerald-600":"text-red-600"}>{u.active?"Ativo":"Inativo"}</td></tr>)}</tbody></table></div><form onSubmit={submit} className="h-fit rounded-2xl border bg-white p-5"><h2 className="font-bold">Adicionar usuário</h2><div className="mt-4 space-y-3"><Field label="Nome" value={form.name} set={v=>setForm({...form,name:v})}/><Field label="E-mail" value={form.email} set={v=>setForm({...form,email:v})}/><label className="block text-sm">Senha<input required minLength={8} type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} className="mt-2 w-full rounded-xl border px-4 py-3"/></label><label className="block text-sm">Perfil<select value={form.role} onChange={e=>setForm({...form,role:e.target.value})} className="mt-2 w-full rounded-xl border px-4 py-3"><option value="operator">Operador</option><option value="viewer">Visualizador</option><option value="admin">Administrador</option></select></label><button disabled={busy} className="w-full rounded-xl bg-blue-600 p-3 font-semibold text-white">{busy?"Salvando...":"Criar usuário"}</button></div></form></div>}
-function Integrations({integration,org,token,refresh}:{integration:Integration|null;org:string;token:string;refresh:()=>void}){const [saving,setSaving]=useState(false),[form,setForm]=useState({serper_api_key:"",openai_api_key:"",openai_model:integration?.openai_model||"gpt-5.6-luna",vercel_token:"",evolution_url:integration?.evolution_url||"",evolution_api_key:"",evolution_instance:integration?.evolution_instance||"",whatsapp_test_mode:integration?.whatsapp_test_mode||false,whatsapp_test_number:integration?.whatsapp_test_number||""});async function submit(e:FormEvent){e.preventDefault();setSaving(true);try{await apiRequest(`/api/v1/integrations?organization_id=${org}`,{method:"PUT",body:JSON.stringify(form)},token);await refresh()}finally{setSaving(false)}}const fields:["serper_api_key"|"openai_api_key"|"openai_model"|"vercel_token"|"evolution_url"|"evolution_api_key"|"evolution_instance",string,boolean][]=[["serper_api_key","Serper API key",!!integration?.serper_configured],["openai_api_key","OpenAI API key",!!integration?.openai_configured],["vercel_token","Vercel token",!!integration?.vercel_configured],["evolution_api_key","Evolution API key",!!integration?.evolution_configured],["evolution_url","Evolution URL",false],["evolution_instance","Instância WhatsApp",false],["openai_model","Modelo OpenAI",false]];return <form onSubmit={submit} className="max-w-3xl rounded-2xl border bg-white p-6"><div className="mb-6 flex gap-3"><ShieldCheck className="text-blue-600"/><div><h2 className="font-bold">Integrações</h2><p className="text-sm text-slate-500">Modo atual: <b>{integration?.mode||"mock"}</b>. Chaves nunca são devolvidas pela API.</p></div></div><section className={`mb-6 rounded-2xl border p-4 ${form.whatsapp_test_mode?"border-amber-300 bg-amber-50":"border-slate-200 bg-slate-50"}`}><div className="flex flex-wrap items-center justify-between gap-4"><div><h3 className="font-semibold">Número global para testes</h3><p className="mt-1 max-w-xl text-sm text-slate-600">Quando ativo, todas as mensagens são redirecionadas para este número. O telefone original da empresa continua salvo no histórico.</p></div><label className="flex items-center gap-3 text-sm font-semibold"><input type="checkbox" checked={form.whatsapp_test_mode} onChange={e=>setForm({...form,whatsapp_test_mode:e.target.checked})} className="h-5 w-5 accent-blue-600"/>Ativar modo de teste</label></div>{form.whatsapp_test_mode&&<label className="mt-4 block max-w-sm text-sm text-slate-700">Número com DDD<input required value={form.whatsapp_test_number} onChange={e=>setForm({...form,whatsapp_test_number:e.target.value})} placeholder="(84) 99999-9999" className="mt-2 w-full rounded-xl border border-amber-300 bg-white px-3 py-2.5 outline-none focus:border-blue-500"/></label>}</section><div className="grid gap-4 sm:grid-cols-2">{fields.map(([key,label,ok])=><label key={key} className="text-sm text-slate-600">{label} {ok&&<span className="text-emerald-600">· configurado</span>}<input type={key.includes("key")||key==="vercel_token"?"password":"text"} value={form[key]} placeholder={ok?"Deixe vazio para manter":""} onChange={e=>setForm({...form,[key]:e.target.value})} className="mt-2 w-full rounded-xl border px-3 py-2.5 outline-none focus:border-blue-500"/></label>)}</div><button disabled={saving} className="mt-6 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white">{saving?"Salvando...":"Salvar configurações"}</button></form>}
-function NewOperation({org,token,close,done}:{org:string;token:string;close:()=>void;done:()=>void}){const [form,setForm]=useState({niche:"Barbearias",city:"Mossoró",target_count:10,approval_mode:"automatic" as ApprovalMode,message_template:template,scheduled_for:""}),[busy,setBusy]=useState(false),[error,setError]=useState("");async function submit(e:FormEvent){e.preventDefault();setBusy(true);try{await createOperation(token,{...form,organization_id:org,scheduled_for:form.scheduled_for?new Date(form.scheduled_for).toISOString():undefined});done()}catch(c){setError(c instanceof Error?c.message:"Falha ao criar");setBusy(false)}}return <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/40" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><form onSubmit={submit} className="h-full w-full max-w-lg overflow-y-auto bg-white p-6 shadow-2xl"><div className="flex items-center justify-between"><div><h2 className="text-xl font-bold">Nova operação</h2><p className="text-sm text-slate-500">Execute agora ou programe para depois.</p></div><button type="button" onClick={close}><X/></button></div><div className="mt-8 space-y-5"><Field label="Nicho" value={form.niche} set={v=>setForm({...form,niche:v})}/><Field label="Cidade" value={form.city} set={v=>setForm({...form,city:v})}/><label className="block text-sm">Quantidade<input type="number" min="1" max="500" value={form.target_count} onChange={e=>setForm({...form,target_count:Number(e.target.value)})} className="mt-2 w-full rounded-xl border px-4 py-3"/></label><label className="block text-sm">Modo de envio<select value={form.approval_mode} onChange={e=>setForm({...form,approval_mode:e.target.value as ApprovalMode})} className="mt-2 w-full rounded-xl border px-4 py-3"><option value="automatic">Totalmente automático</option><option value="human_review">Aprovação humana</option></select></label><label className="block text-sm">Agendar (opcional)<input type="datetime-local" value={form.scheduled_for} onChange={e=>setForm({...form,scheduled_for:e.target.value})} className="mt-2 w-full rounded-xl border px-4 py-3"/></label><label className="block text-sm">Mensagem<textarea rows={6} value={form.message_template} onChange={e=>setForm({...form,message_template:e.target.value})} className="mt-2 w-full rounded-xl border px-4 py-3"/><span className="text-xs text-slate-500">Variáveis: {"{{empresa}} {{cidade}} {{segmento}} {{link}}"}</span></label>{error&&<p className="text-sm text-red-600">{error}</p>}<button disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 p-3 font-semibold text-white">{busy?<Loader2 className="animate-spin" size={18}/>:<Play size={18}/>}Criar operação</button></div></form></div>}
-function Field({label,value,set}:{label:string;value:string;set:(v:string)=>void}){return <label className="block text-sm">{label}<input required value={value} onChange={e=>set(e.target.value)} className="mt-2 w-full rounded-xl border px-4 py-3"/></label>}
-function Empty(){return <div className="rounded-2xl border border-dashed bg-white p-12 text-center"><Check className="mx-auto text-slate-400"/><h3 className="mt-3 font-bold">Tudo revisado</h3><p className="mt-1 text-sm text-slate-500">Não há mensagens aguardando aprovação.</p></div>}
-function useCanArchive(){const [allowed,setAllowed]=useState(false),token=getToken();useEffect(()=>{if(!token)return;me(token).then(user=>setAllowed(user.organizations.some(organization=>organization.role==="admin"))).catch(()=>setAllowed(false))},[token]);return allowed}
+function Card({
+  title,
+  value,
+  icon: Icon,
+  tone,
+}: {
+  title: string;
+  value: number;
+  icon: React.ElementType;
+  tone: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex justify-between">
+        <div>
+          <p className="text-sm text-slate-500">{title}</p>
+          <p className="mt-2 text-3xl font-bold">{value}</p>
+        </div>
+        <span className={`h-fit rounded-xl p-2.5 ${tone}`}>
+          <Icon size={20} />
+        </span>
+      </div>
+    </div>
+  );
+}
+function Overview({
+  summary,
+  operations,
+  refresh,
+  onError,
+}: {
+  summary: Summary | null;
+  operations: Operation[];
+  refresh: () => Promise<void>;
+  onError: (message: string) => void;
+}) {
+  const active = operations.find(
+    (o) => !["completed", "failed"].includes(o.status),
+  );
+  return (
+    <>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card
+          title="Empresas no histórico"
+          value={summary?.companies || 0}
+          icon={Building2}
+          tone="bg-blue-50 text-blue-600"
+        />
+        <Card
+          title="Sites criados"
+          value={summary?.sites_generated || 0}
+          icon={Globe2}
+          tone="bg-cyan-50 text-cyan-600"
+        />
+        <Card
+          title="Mensagens enviadas"
+          value={summary?.messages_sent || 0}
+          icon={MessageSquareText}
+          tone="bg-emerald-50 text-emerald-600"
+        />
+        <Card
+          title="Bloqueadas pelo histórico"
+          value={summary?.blocked || 0}
+          icon={ShieldCheck}
+          tone="bg-violet-50 text-violet-600"
+        />
+      </div>
+      {active && (
+        <section className="mt-6 rounded-2xl bg-[#0b1b2d] p-6 text-white">
+          <div className="flex items-center gap-3">
+            <span className="relative flex h-3 w-3">
+              <span className="absolute h-full w-full animate-ping rounded-full bg-cyan-300" />
+              <span className="relative h-3 w-3 rounded-full bg-cyan-400" />
+            </span>
+            <b>Operação em andamento</b>
+          </div>
+          <h2 className="mt-5 text-2xl font-bold">
+            {active.niche} em {active.city}
+          </h2>
+          <p className="mt-1 text-sm text-slate-400">
+            {labels[active.status] || active.status} · {active.found_count}/
+            {active.target_count} encontradas · {active.sent_count} envios
+          </p>
+          <div className="mt-5 h-2 overflow-hidden rounded bg-white/10">
+            <div
+              className="h-full bg-cyan-400"
+              style={{
+                width: `${Math.min(100, (active.analyzed_count / Math.max(active.target_count, 1)) * 100)}%`,
+              }}
+            />
+          </div>
+        </section>
+      )}
+      <section className="mt-6">
+        <h2 className="mb-3 font-semibold">Operações recentes</h2>
+        <OperationTable
+          rows={operations.slice(0, 6)}
+          refresh={refresh}
+          onError={onError}
+        />
+      </section>
+    </>
+  );
+}
+function Operations({
+  operations,
+  refresh,
+  onError,
+}: {
+  operations: Operation[];
+  refresh: () => Promise<void>;
+  onError: (message: string) => void;
+}) {
+  return (
+    <>
+      <div className="mb-5">
+        <h2 className="text-xl font-bold">Histórico de operações</h2>
+        <p className="text-sm text-slate-500">
+          Execuções manuais e agendadas, com contadores persistidos.
+        </p>
+      </div>
+      <OperationTable rows={operations} refresh={refresh} onError={onError} />
+    </>
+  );
+}
+function OperationTable({
+  rows,
+  refresh,
+  onError,
+}: {
+  rows: Operation[];
+  refresh: () => Promise<void>;
+  onError: (message: string) => void;
+}) {
+  const router = useRouter(),
+    token = getToken(),
+    canArchive = useCanArchive(),
+    [busy, setBusy] = useState("");
+  async function archive(operation: Operation, event: React.MouseEvent) {
+    event.stopPropagation();
+    if (
+      !token ||
+      !window.confirm(
+        "Arquivar esta operação? O histórico das empresas será preservado.",
+      )
+    )
+      return;
+    setBusy(operation.id);
+    try {
+      await apiRequest(
+        `/api/v1/operations/${operation.id}`,
+        { method: "DELETE" },
+        token,
+      );
+      await refresh();
+    } catch (reason) {
+      onError(
+        reason instanceof Error
+          ? reason.message
+          : "Não foi possível arquivar a operação",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+  return (
+    <div className="overflow-x-auto rounded-2xl border bg-white">
+      <table className="w-full min-w-[820px] text-left text-sm">
+        <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+          <tr>
+            <th className="p-4">Operação</th>
+            <th>Status</th>
+            <th>Encontradas</th>
+            <th>Sites</th>
+            <th>Enviadas</th>
+            <th>Data</th>
+            {canArchive && <th className="pr-4 text-right">Ações</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((o) => (
+            <tr
+              key={o.id}
+              tabIndex={0}
+              role="link"
+              onClick={() => router.push(`/operations/${o.id}`)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ")
+                  router.push(`/operations/${o.id}`);
+              }}
+              className="cursor-pointer border-t outline-none transition hover:bg-blue-50/60 focus:bg-blue-50"
+            >
+              <td className="p-4">
+                <b>{o.niche}</b>
+                <p className="text-xs text-slate-500">
+                  {o.city} ·{" "}
+                  {o.approval_mode === "automatic"
+                    ? "Automático"
+                    : "Revisão humana"}
+                </p>
+              </td>
+              <td>
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${o.status === "completed" ? "bg-emerald-50 text-emerald-700" : o.status === "failed" ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-700"}`}
+                >
+                  {labels[o.status] || o.status}
+                </span>
+              </td>
+              <td>
+                {o.found_count}/{o.target_count}
+              </td>
+              <td>{o.generated_count}</td>
+              <td>{o.sent_count}</td>
+              <td>{new Date(o.created_at).toLocaleString("pt-BR")}</td>
+              {canArchive && (
+                <td className="pr-4 text-right">
+                  <button
+                    disabled={busy === o.id}
+                    title="Arquivar operação"
+                    onClick={(event) => archive(o, event)}
+                    className="rounded-lg p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {busy === o.id ? (
+                      <Loader2 className="animate-spin" size={16} />
+                    ) : (
+                      <Trash2 size={16} />
+                    )}
+                  </button>
+                </td>
+              )}
+            </tr>
+          ))}
+          {!rows.length && (
+            <tr>
+              <td
+                colSpan={canArchive ? 7 : 6}
+                className="p-10 text-center text-slate-500"
+              >
+                Nenhuma operação criada.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+function Companies({
+  companies,
+  refresh,
+  onError,
+}: {
+  companies: Company[];
+  refresh: () => Promise<void>;
+  onError: (message: string) => void;
+}) {
+  const token = getToken(),
+    canArchive = useCanArchive(),
+    [busy, setBusy] = useState(""),
+    [selected, setSelected] = useState<string[]>([]),
+    [archivingSelected, setArchivingSelected] = useState(false),
+    selectedCompanies = companies.filter((company) =>
+      selected.includes(company.id),
+    ),
+    allSelected =
+      companies.length > 0 && selectedCompanies.length === companies.length;
+  function toggle(companyId: string) {
+    setSelected((current) =>
+      current.includes(companyId)
+        ? current.filter((id) => id !== companyId)
+        : [...current, companyId],
+    );
+  }
+  async function archive(company: Company) {
+    if (
+      !token ||
+      !window.confirm(
+        `Arquivar ${company.name}? O registro continuará bloqueando novas prospecções.`,
+      )
+    )
+      return;
+    setBusy(company.id);
+    try {
+      await apiRequest(
+        `/api/v1/companies/${company.id}`,
+        { method: "DELETE" },
+        token,
+      );
+      setSelected((current) => current.filter((id) => id !== company.id));
+      await refresh();
+    } catch (reason) {
+      onError(
+        reason instanceof Error
+          ? reason.message
+          : "Não foi possível arquivar a empresa",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+  async function archiveSelected() {
+    if (
+      !token ||
+      !selectedCompanies.length ||
+      !window.confirm(
+        `Arquivar ${selectedCompanies.length} empresa${selectedCompanies.length === 1 ? "" : "s"}? Os registros continuarão bloqueando novas prospecções.`,
+      )
+    )
+      return;
+    setArchivingSelected(true);
+    try {
+      for (const company of selectedCompanies) {
+        await apiRequest(
+          `/api/v1/companies/${company.id}`,
+          { method: "DELETE" },
+          token,
+        );
+      }
+      setSelected([]);
+      await refresh();
+    } catch (reason) {
+      onError(
+        reason instanceof Error
+          ? reason.message
+          : "Não foi possível arquivar as empresas selecionadas",
+      );
+      await refresh();
+    } finally {
+      setArchivingSelected(false);
+    }
+  }
+  return (
+    <>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold">Empresas</h2>
+          <p className="text-sm text-slate-500">
+            Histórico global de empresas encontradas nas operações.
+          </p>
+        </div>
+        {canArchive && companies.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={(event) =>
+                  setSelected(
+                    event.target.checked
+                      ? companies.map((company) => company.id)
+                      : [],
+                  )
+                }
+                className="h-4 w-4 accent-blue-600"
+              />
+              Selecionar todas
+            </label>
+            {selectedCompanies.length > 0 && (
+              <button
+                disabled={archivingSelected || !!busy}
+                onClick={archiveSelected}
+                className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {archivingSelected ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <Trash2 size={16} />
+                )}
+                Arquivar selecionadas ({selectedCompanies.length})
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        {companies.map((company) => {
+          const isSelected = selected.includes(company.id);
+          return (
+            <article
+              key={company.id}
+              className={`rounded-2xl border bg-white p-5 shadow-sm ${isSelected ? "border-blue-400 ring-2 ring-blue-100" : ""}`}
+            >
+              <div className="flex items-start justify-between gap-4">
+                {canArchive && (
+                  <label className="mt-1 flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggle(company.id)}
+                      aria-label={`Selecionar ${company.name}`}
+                      className="h-4 w-4 accent-blue-600"
+                    />
+                  </label>
+                )}
+                <div className="min-w-0 flex-1">
+                  <h2 className="font-bold">{company.name}</h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {company.category || "Segmento não informado"} ·{" "}
+                    {company.city || "Cidade não informada"}
+                  </p>
+                </div>
+                {canArchive && (
+                  <button
+                    disabled={busy === company.id || archivingSelected}
+                    title="Arquivar empresa"
+                    onClick={() => archive(company)}
+                    className="rounded-lg p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {busy === company.id ? (
+                      <Loader2 className="animate-spin" size={17} />
+                    ) : (
+                      <Trash2 size={17} />
+                    )}
+                  </button>
+                )}
+              </div>
+              <div className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                {company.address && (
+                  <p className="flex gap-2">
+                    <MapPin className="mt-0.5 shrink-0" size={15} />
+                    {company.address}
+                  </p>
+                )}
+                <div>
+                  {company.phone && (
+                    <p className="flex items-center gap-2">
+                      <Phone size={15} />
+                      {company.phone}
+                    </p>
+                  )}
+                  {company.other_phones.map((phone) => (
+                    <p key={phone} className="ml-6 text-xs">
+                      {phone}
+                    </p>
+                  ))}
+                </div>
+                {company.email && (
+                  <p className="flex items-center gap-2">
+                    <Mail size={15} />
+                    {company.email}
+                  </p>
+                )}
+                <p>
+                  Pesquisada em{" "}
+                  {new Date(company.first_seen_at).toLocaleString("pt-BR")}
+                </p>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-3 text-xs font-semibold">
+                {company.maps_url && (
+                  <a
+                    target="_blank"
+                    rel="noreferrer"
+                    href={company.maps_url}
+                    className="text-blue-600"
+                  >
+                    Google Maps
+                  </a>
+                )}
+                {company.website && (
+                  <a
+                    target="_blank"
+                    rel="noreferrer"
+                    href={company.website}
+                    className="text-blue-600"
+                  >
+                    Site original
+                  </a>
+                )}
+                {company.social_links.map((link, index) => (
+                  <a
+                    key={link}
+                    target="_blank"
+                    rel="noreferrer"
+                    href={link}
+                    className="text-blue-600"
+                  >
+                    Rede social {index + 1}
+                  </a>
+                ))}
+              </div>
+              <div className="mt-4 border-t pt-4">
+                <p className="text-xs font-semibold uppercase text-slate-400">
+                  Operações em que foi listada
+                </p>
+                <div className="mt-2 space-y-2">
+                  {company.operations.map((operation) => (
+                    <div
+                      key={operation.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 p-2 text-xs"
+                    >
+                      <button
+                        onClick={() =>
+                          window.location.assign(`/operations/${operation.id}`)
+                        }
+                        className="text-left font-semibold text-slate-700 hover:text-blue-600"
+                      >
+                        {operation.niche} em {operation.city}
+                        <span className="ml-2 font-normal text-slate-400">
+                          {new Date(operation.listed_at).toLocaleString(
+                            "pt-BR",
+                          )}
+                        </span>
+                      </button>
+                      {operation.generated_site_url && (
+                        <a
+                          href={operation.generated_site_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-emerald-600"
+                        >
+                          Site gerado
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </article>
+          );
+        })}
+        {!companies.length && (
+          <div className="col-span-full rounded-2xl border border-dashed bg-white p-12 text-center text-slate-500">
+            Nenhuma empresa no histórico.
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+function Reviews({
+  messages,
+  token,
+  refresh,
+}: {
+  messages: Message[];
+  token: string;
+  refresh: () => void;
+}) {
+  const [busy, setBusy] = useState("");
+  async function approve(id: string) {
+    setBusy(id);
+    await apiRequest(
+      `/api/v1/messages/${id}/approve`,
+      { method: "POST", body: "{}" },
+      token,
+    );
+    await refresh();
+    setBusy("");
+  }
+  return (
+    <div className="space-y-4">
+      {messages.map((m) => (
+        <article key={m.id} className="rounded-2xl border bg-white p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-bold">{m.company_name}</h3>
+              <p className="text-sm text-slate-500">
+                Telefone da empresa: {m.recipient}
+              </p>
+              {m.test_mode && (
+                <p className="mt-1 text-xs font-semibold text-amber-700">
+                  Modo de teste: envio realizado para {m.delivery_recipient}
+                </p>
+              )}
+            </div>
+            {m.site_url && (
+              <a
+                className="flex items-center gap-1 text-sm text-blue-600"
+                target="_blank"
+                rel="noreferrer"
+                href={m.site_url}
+              >
+                Ver site <ExternalLink size={14} />
+              </a>
+            )}
+          </div>
+          <p className="my-5 rounded-xl bg-slate-50 p-4 text-sm leading-6">
+            {m.content}
+          </p>
+          <button
+            disabled={busy === m.id}
+            onClick={() => approve(m.id)}
+            className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white"
+          >
+            {busy === m.id ? (
+              <Loader2 className="animate-spin" size={16} />
+            ) : (
+              <Check size={16} />
+            )}
+            Aprovar e enviar
+          </button>
+        </article>
+      ))}
+      {!messages.length && <Empty />}
+    </div>
+  );
+}
+function Team({
+  users,
+  org,
+  token,
+  refresh,
+}: {
+  users: TeamUser[];
+  org: string;
+  token: string;
+  refresh: () => void;
+}) {
+  const [form, setForm] = useState({
+      name: "",
+      email: "",
+      password: "",
+      role: "operator",
+    }),
+    [busy, setBusy] = useState(false);
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    await apiRequest(
+      "/api/v1/users",
+      {
+        method: "POST",
+        body: JSON.stringify({ ...form, organization_id: org }),
+      },
+      token,
+    );
+    setForm({ name: "", email: "", password: "", role: "operator" });
+    await refresh();
+    setBusy(false);
+  }
+  return (
+    <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+      <div className="overflow-hidden rounded-2xl border bg-white">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+            <tr>
+              <th className="p-4">Usuário</th>
+              <th>Perfil</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((u) => (
+              <tr key={u.id} className="border-t">
+                <td className="p-4">
+                  <b>{u.name}</b>
+                  <p className="text-xs text-slate-500">{u.email}</p>
+                </td>
+                <td>{u.role}</td>
+                <td className={u.active ? "text-emerald-600" : "text-red-600"}>
+                  {u.active ? "Ativo" : "Inativo"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <form onSubmit={submit} className="h-fit rounded-2xl border bg-white p-5">
+        <h2 className="font-bold">Adicionar usuário</h2>
+        <div className="mt-4 space-y-3">
+          <Field
+            label="Nome"
+            value={form.name}
+            set={(v) => setForm({ ...form, name: v })}
+          />
+          <Field
+            label="E-mail"
+            value={form.email}
+            set={(v) => setForm({ ...form, email: v })}
+          />
+          <label className="block text-sm">
+            Senha
+            <input
+              required
+              minLength={8}
+              type="password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              className="mt-2 w-full rounded-xl border px-4 py-3"
+            />
+          </label>
+          <label className="block text-sm">
+            Perfil
+            <select
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              className="mt-2 w-full rounded-xl border px-4 py-3"
+            >
+              <option value="operator">Operador</option>
+              <option value="viewer">Visualizador</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </label>
+          <button
+            disabled={busy}
+            className="w-full rounded-xl bg-blue-600 p-3 font-semibold text-white"
+          >
+            {busy ? "Salvando..." : "Criar usuário"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+function Integrations({
+  integration,
+  org,
+  token,
+  refresh,
+}: {
+  integration: Integration | null;
+  org: string;
+  token: string;
+  refresh: () => void;
+}) {
+  const [saving, setSaving] = useState(false),
+    [form, setForm] = useState({
+      openai_model: integration?.openai_model || "gpt-5.6-luna",
+      evolution_url: integration?.evolution_url || "",
+      evolution_instance: integration?.evolution_instance || "",
+      whatsapp_test_mode: integration?.whatsapp_test_mode || false,
+      whatsapp_test_number: integration?.whatsapp_test_number || "",
+    });
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await apiRequest(
+        `/api/v1/integrations?organization_id=${org}`,
+        { method: "PUT", body: JSON.stringify(form) },
+        token,
+      );
+      await refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+  const statuses = [
+    ["Serper", integration?.serper_configured],
+    ["OpenAI", integration?.openai_configured],
+    ["Vercel", integration?.vercel_configured],
+    ["Evolution", integration?.evolution_configured],
+  ] as const;
+  return (
+    <form
+      onSubmit={submit}
+      className="max-w-3xl rounded-2xl border bg-white p-6"
+    >
+      <div className="mb-6 flex gap-3">
+        <ShieldCheck className="text-blue-600" />
+        <div>
+          <h2 className="font-bold">Integrações</h2>
+          <p className="text-sm text-slate-500">
+            Modo atual: <b>{integration?.mode || "mock"}</b>. As chaves são
+            administradas exclusivamente no ambiente seguro do backend.
+          </p>
+        </div>
+      </div>
+      <section
+        className={`mb-6 rounded-2xl border p-4 ${form.whatsapp_test_mode ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-slate-50"}`}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h3 className="font-semibold">Número global para testes</h3>
+            <p className="mt-1 max-w-xl text-sm text-slate-600">
+              Quando ativo, todas as mensagens são redirecionadas para este
+              número. O telefone original da empresa continua salvo no
+              histórico.
+            </p>
+          </div>
+          <label className="flex items-center gap-3 text-sm font-semibold">
+            <input
+              type="checkbox"
+              checked={form.whatsapp_test_mode}
+              onChange={(e) =>
+                setForm({ ...form, whatsapp_test_mode: e.target.checked })
+              }
+              className="h-5 w-5 accent-blue-600"
+            />
+            Ativar modo de teste
+          </label>
+        </div>
+        {form.whatsapp_test_mode && (
+          <label className="mt-4 block max-w-sm text-sm text-slate-700">
+            Número com DDD
+            <input
+              required
+              value={form.whatsapp_test_number}
+              onChange={(e) =>
+                setForm({ ...form, whatsapp_test_number: e.target.value })
+              }
+              placeholder="(84) 99999-9999"
+              className="mt-2 w-full rounded-xl border border-amber-300 bg-white px-3 py-2.5 outline-none focus:border-blue-500"
+            />
+          </label>
+        )}
+      </section>
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {statuses.map(([label, configured]) => (
+          <div
+            key={label}
+            className="rounded-xl border bg-slate-50 p-3 text-sm"
+          >
+            <b>{label}</b>
+            <p className={configured ? "text-emerald-600" : "text-amber-700"}>
+              {configured ? "Configurado no servidor" : "Não configurado"}
+            </p>
+          </div>
+        ))}
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="text-sm text-slate-600">
+          Evolution URL
+          <input
+            value={form.evolution_url}
+            onChange={(e) =>
+              setForm({ ...form, evolution_url: e.target.value })
+            }
+            className="mt-2 w-full rounded-xl border px-3 py-2.5 outline-none focus:border-blue-500"
+          />
+        </label>
+        <label className="text-sm text-slate-600">
+          Instância WhatsApp
+          <input
+            value={form.evolution_instance}
+            onChange={(e) =>
+              setForm({ ...form, evolution_instance: e.target.value })
+            }
+            className="mt-2 w-full rounded-xl border px-3 py-2.5 outline-none focus:border-blue-500"
+          />
+        </label>
+        <label className="text-sm text-slate-600">
+          Modelo OpenAI
+          <input
+            value={form.openai_model}
+            onChange={(e) => setForm({ ...form, openai_model: e.target.value })}
+            className="mt-2 w-full rounded-xl border px-3 py-2.5 outline-none focus:border-blue-500"
+          />
+        </label>
+      </div>
+      <button
+        disabled={saving}
+        className="mt-6 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white"
+      >
+        {saving ? "Salvando..." : "Salvar configurações"}
+      </button>
+    </form>
+  );
+}
+function NewOperation({
+  org,
+  token,
+  close,
+  done,
+}: {
+  org: string;
+  token: string;
+  close: () => void;
+  done: () => void;
+}) {
+  const [form, setForm] = useState({
+      niche: "Barbearias",
+      city: "Mossoró",
+      target_count: 10,
+      approval_mode: "automatic" as ApprovalMode,
+      message_template: template,
+      scheduled_for: "",
+    }),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await createOperation(token, {
+        ...form,
+        organization_id: org,
+        scheduled_for: form.scheduled_for
+          ? new Date(form.scheduled_for).toISOString()
+          : undefined,
+      });
+      done();
+    } catch (c) {
+      setError(c instanceof Error ? c.message : "Falha ao criar");
+      setBusy(false);
+    }
+  }
+  return (
+    <div
+      className="fixed inset-0 z-50 flex justify-end bg-slate-950/40"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) close();
+      }}
+    >
+      <form
+        onSubmit={submit}
+        className="h-full w-full max-w-lg overflow-y-auto bg-white p-6 shadow-2xl"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold">Nova operação</h2>
+            <p className="text-sm text-slate-500">
+              Execute agora ou programe para depois.
+            </p>
+          </div>
+          <button type="button" onClick={close}>
+            <X />
+          </button>
+        </div>
+        <div className="mt-8 space-y-5">
+          <Field
+            label="Nicho"
+            value={form.niche}
+            set={(v) => setForm({ ...form, niche: v })}
+          />
+          <Field
+            label="Cidade"
+            value={form.city}
+            set={(v) => setForm({ ...form, city: v })}
+          />
+          <label className="block text-sm">
+            Quantidade
+            <input
+              type="number"
+              min="1"
+              max="500"
+              value={form.target_count}
+              onChange={(e) =>
+                setForm({ ...form, target_count: Number(e.target.value) })
+              }
+              className="mt-2 w-full rounded-xl border px-4 py-3"
+            />
+          </label>
+          <label className="block text-sm">
+            Modo de envio
+            <select
+              value={form.approval_mode}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  approval_mode: e.target.value as ApprovalMode,
+                })
+              }
+              className="mt-2 w-full rounded-xl border px-4 py-3"
+            >
+              <option value="automatic">Totalmente automático</option>
+              <option value="human_review">Aprovação humana</option>
+            </select>
+          </label>
+          <label className="block text-sm">
+            Agendar (opcional)
+            <input
+              type="datetime-local"
+              value={form.scheduled_for}
+              onChange={(e) =>
+                setForm({ ...form, scheduled_for: e.target.value })
+              }
+              className="mt-2 w-full rounded-xl border px-4 py-3"
+            />
+          </label>
+          <label className="block text-sm">
+            Mensagem
+            <textarea
+              rows={6}
+              value={form.message_template}
+              onChange={(e) =>
+                setForm({ ...form, message_template: e.target.value })
+              }
+              className="mt-2 w-full rounded-xl border px-4 py-3"
+            />
+            <span className="text-xs text-slate-500">
+              Variáveis: {"{{empresa}} {{cidade}} {{segmento}} {{link}}"}
+            </span>
+          </label>
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <button
+            disabled={busy}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 p-3 font-semibold text-white"
+          >
+            {busy ? (
+              <Loader2 className="animate-spin" size={18} />
+            ) : (
+              <Play size={18} />
+            )}
+            Criar operação
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+function Field({
+  label,
+  value,
+  set,
+}: {
+  label: string;
+  value: string;
+  set: (v: string) => void;
+}) {
+  return (
+    <label className="block text-sm">
+      {label}
+      <input
+        required
+        value={value}
+        onChange={(e) => set(e.target.value)}
+        className="mt-2 w-full rounded-xl border px-4 py-3"
+      />
+    </label>
+  );
+}
+function Empty() {
+  return (
+    <div className="rounded-2xl border border-dashed bg-white p-12 text-center">
+      <Check className="mx-auto text-slate-400" />
+      <h3 className="mt-3 font-bold">Tudo revisado</h3>
+      <p className="mt-1 text-sm text-slate-500">
+        Não há mensagens aguardando aprovação.
+      </p>
+    </div>
+  );
+}
+function useCanArchive() {
+  const [allowed, setAllowed] = useState(false),
+    token = getToken();
+  useEffect(() => {
+    if (!token) return;
+    me(token)
+      .then((user) =>
+        setAllowed(
+          user.organizations.some(
+            (organization) => organization.role === "admin",
+          ),
+        ),
+      )
+      .catch(() => setAllowed(false));
+  }, [token]);
+  return allowed;
+}
