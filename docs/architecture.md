@@ -30,6 +30,8 @@ O Supabase Auth emite as sessões, mas toda autorização por organização e fu
 7. A mensagem recebe o nome da empresa e a URL gerada.
 8. O envio acontece automaticamente ou aguarda aprovação humana.
 
+Na interface de acompanhamento, cada empresa é exibida em uma única etapa: lista de empresas, criando site, aguardando aprovação humana, enviado ou descartado. Bloqueios, falhas e descartes por presença digital são consolidados na etapa descartado, mantendo o motivo no cartão.
+
 ## Histórico e arquivamento
 
 - Cada empresa preserva dados de contato, endereço, links, primeira pesquisa e operações relacionadas.

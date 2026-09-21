@@ -40,11 +40,13 @@ maps-site-generator/
 - Modos de envio automático ou com aprovação humana.
 - Worker interno e acompanhamento do estágio atual.
 - Página `/operations/[id]` atualizada por polling.
-- Kanban sem duplicação de cards:
-  - localizadas;
-  - em análise;
-  - site criado ou envio;
-  - descartadas ou bloqueadas.
+- Kanban sem duplicação de cards, organizado em cinco etapas:
+  - lista de empresas;
+  - criando site;
+  - aguardando aprovação humana;
+  - enviado;
+  - descartado.
+- O menu lateral pode ser recolhido no desktop e mantém a preferência entre páginas e recarregamentos.
 - Contadores, progresso, empresa atual, links e mensagens.
 
 ### Empresas e histórico

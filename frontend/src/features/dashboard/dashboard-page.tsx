@@ -16,6 +16,8 @@ import {
   Menu,
   MessageSquareText,
   Phone,
+  PanelLeftClose,
+  PanelLeftOpen,
   Play,
   Radar,
   Settings,
@@ -31,6 +33,7 @@ import {
   listOperations,
 } from "@/features/operations/services/operations";
 import type { ApprovalMode, Operation } from "@/features/operations/types";
+import { useSidebarCollapse } from "@/hooks/use-sidebar-collapse";
 
 type View =
   "overview" | "operations" | "companies" | "reviews" | "users" | "settings";
@@ -118,6 +121,7 @@ const template =
 
 export function DashboardPage() {
   const router = useRouter();
+  const { collapsed: sidebarCollapsed, toggleCollapsed } = useSidebarCollapse();
   const [user, setUser] = useState<CurrentUser | null>(null),
     [view, setView] = useState<View>("overview"),
     [loading, setLoading] = useState(true),
@@ -194,18 +198,47 @@ export function DashboardPage() {
   ];
   return (
     <div className="min-h-screen bg-[#f4f7fb] text-slate-900">
+      {menu && (
+        <button
+          aria-label="Fechar menu"
+          onClick={() => setMenu(false)}
+          className="fixed inset-0 z-30 bg-slate-950/50 lg:hidden"
+        />
+      )}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 border-r border-white/10 bg-[#07111f] p-5 text-white transition-transform lg:translate-x-0 ${menu ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-40 w-64 border-r border-white/10 bg-[#07111f] p-5 text-white transition-[width,transform] duration-200 lg:translate-x-0 ${sidebarCollapsed ? "lg:w-20 lg:px-3" : "lg:w-64"} ${menu ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="flex items-center gap-3">
+        <div
+          className={`flex items-center gap-3 ${sidebarCollapsed ? "lg:justify-center" : ""}`}
+        >
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-500">
             <Radar size={21} />
           </div>
-          <div>
+          <div className={sidebarCollapsed ? "lg:hidden" : ""}>
             <b>Virtualizze</b>
             <p className="text-xs text-cyan-300">Prospector</p>
           </div>
+          <button
+            aria-label="Fechar menu"
+            onClick={() => setMenu(false)}
+            className="ml-auto lg:hidden"
+          >
+            <X size={20} />
+          </button>
         </div>
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+          aria-label={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+          className="absolute -right-3 top-20 hidden h-7 w-7 place-items-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-slate-50 lg:grid"
+        >
+          {sidebarCollapsed ? (
+            <PanelLeftOpen size={15} />
+          ) : (
+            <PanelLeftClose size={15} />
+          )}
+        </button>
         <nav className="mt-10 space-y-2">
           {nav.map(([id, label, Icon]) => (
             <button
@@ -214,34 +247,46 @@ export function DashboardPage() {
                 setView(id);
                 setMenu(false);
               }}
-              className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm ${view === id ? "bg-blue-500" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}
+              title={sidebarCollapsed ? label : undefined}
+              className={`relative flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm ${sidebarCollapsed ? "lg:justify-center" : ""} ${view === id ? "bg-blue-500" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}
             >
               <Icon size={18} />
-              {label}
+              <span className={sidebarCollapsed ? "lg:hidden" : ""}>
+                {label}
+              </span>
               {id === "reviews" && summary?.pending_approval ? (
-                <span className="ml-auto rounded-full bg-cyan-300 px-2 text-xs text-slate-950">
+                <span
+                  className={`rounded-full bg-cyan-300 px-2 text-xs text-slate-950 ${sidebarCollapsed ? "lg:absolute lg:right-0 lg:top-0 lg:px-1.5" : "ml-auto"}`}
+                >
                   {summary.pending_approval}
                 </span>
               ) : null}
             </button>
           ))}
         </nav>
-        <div className="absolute bottom-5 left-5 right-5 rounded-xl bg-white/5 p-3">
-          <p className="truncate text-sm font-medium">{user.name}</p>
-          <p className="truncate text-xs text-slate-400">{user.email}</p>
+        <div
+          className={`absolute bottom-5 rounded-xl bg-white/5 p-3 ${sidebarCollapsed ? "left-3 right-3 lg:flex lg:justify-center" : "left-5 right-5"}`}
+        >
+          <div className={sidebarCollapsed ? "lg:hidden" : ""}>
+            <p className="truncate text-sm font-medium">{user.name}</p>
+            <p className="truncate text-xs text-slate-400">{user.email}</p>
+          </div>
           <button
             onClick={() => {
               clearToken();
               router.replace("/login");
             }}
-            className="mt-3 flex items-center gap-2 text-xs text-slate-400 hover:text-white"
+            title="Sair"
+            className={`flex items-center gap-2 text-xs text-slate-400 hover:text-white ${sidebarCollapsed ? "lg:mt-0" : "mt-3"}`}
           >
             <LogOut size={14} />
-            Sair
+            <span className={sidebarCollapsed ? "lg:hidden" : ""}>Sair</span>
           </button>
         </div>
       </aside>
-      <main className="min-h-screen lg:ml-64">
+      <main
+        className={`min-h-screen transition-[margin] duration-200 ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"}`}
+      >
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-white/90 px-5 backdrop-blur lg:px-8">
           <button className="lg:hidden" onClick={() => setMenu(true)}>
             <Menu />
