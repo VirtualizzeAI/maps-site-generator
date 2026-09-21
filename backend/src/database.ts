@@ -16,7 +16,7 @@ export function database() {
     max: 10,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,
-    ssl: config.databaseSsl ? { rejectUnauthorized: true } : undefined,
+    ssl: config.databaseSsl ? { rejectUnauthorized: false } : undefined,
   });
   pool.on("error", (error) =>
     console.error("Conexão PostgreSQL ociosa falhou", error.message),
