@@ -2,6 +2,16 @@
 
 Última revisão: 23 de outubro de 2026.
 
+## Produção e administração — atualização de 23/10
+
+- Backend publicado na VPS com Docker, HTTPS em `https://apimsg.virtualizzeautomacao.com.br`, Supabase e Evolution Go (`POST /send/text`). Ambiente protegido em `/opt/stacks/maps-site-generator/backend.env`. Deploy manual, sem atualização automática ativada.
+- Cadastro de usuários normaliza nome/e-mail, valida limites do banco, retorna conflito para e-mail duplicado e mantém autorização administrativa. A interface apresenta erro/sucesso e libera o botão após falha.
+- Configurações exibem a URL efetiva da Evolution Go, incluindo fallback do ambiente. A chave continua exclusivamente no servidor; o nome da instância é opcional. O indicador de configuração não confirma conexão do WhatsApp.
+- A gravação valida URL, preserva o número de teste em alterações parciais, recusa número vazio com teste ativo e gera auditoria. Operadores/visualizadores não podem criar usuários ou alterar integrações.
+- Validação: 24 testes e build do backend; lint e build do frontend. Na API publicada, foram validados criação/login de usuário, permissões, conflito, persistência de configurações e auditoria usando organização e contas temporárias, removidas ao final. Nenhuma mensagem foi enviada.
+
+Esta seção atualiza os itens antigos de deploy e Evolution API abaixo.
+
 Este documento é o ponto de retomada para novas sessões de desenvolvimento. Antes de implementar algo, confirme o estado real do código e o histórico do Git.
 
 ## Objetivo do produto

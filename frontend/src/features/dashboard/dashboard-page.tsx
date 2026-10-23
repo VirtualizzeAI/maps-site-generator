@@ -344,6 +344,7 @@ export function DashboardPage() {
           )}{" "}
           {view === "users" && (
             <Team
+              canManage={org.role === "admin"}
               users={team}
               org={org.id}
               token={token}
@@ -352,6 +353,7 @@ export function DashboardPage() {
           )}{" "}
           {view === "settings" && (
             <Integrations
+              canManage={org.role === "admin"}
               integration={integration}
               org={org.id}
               token={token}
@@ -974,11 +976,13 @@ function Reviews({
   );
 }
 function Team({
+  canManage,
   users,
   org,
   token,
   refresh,
 }: {
+  canManage: boolean;
   users: TeamUser[];
   org: string;
   token: string;
@@ -990,11 +994,17 @@ function Team({
       password: "",
       role: "operator",
     }),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [success, setSuccess] = useState("");
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (!canManage || busy) return;
+    setError("");
+    setSuccess("");
     setBusy(true);
-    await apiRequest(
+    try {
+      await apiRequest(
       "/api/v1/users",
       {
         method: "POST",
@@ -1002,9 +1012,14 @@ function Team({
       },
       token,
     );
-    setForm({ name: "", email: "", password: "", role: "operator" });
-    await refresh();
-    setBusy(false);
+      setForm({ name: "", email: "", password: "", role: "operator" });
+      setSuccess("Usuário criado. Ele já pode entrar com o e-mail e a senha definidos.");
+      await refresh();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Não foi possível criar o usuário");
+    } finally {
+      setBusy(false);
+    }
   }
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
@@ -1035,17 +1050,20 @@ function Team({
       </div>
       <form onSubmit={submit} className="h-fit rounded-2xl border bg-white p-5">
         <h2 className="font-bold">Adicionar usuário</h2>
-        <div className="mt-4 space-y-3">
+        {!canManage && <p className="mt-3 text-sm text-slate-600">Somente administradores podem adicionar usuários.</p>}
+        {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
+        {success && <p role="status" className="mt-3 text-sm text-emerald-700">{success}</p>}
+        <fieldset disabled={!canManage || busy} className="mt-4 space-y-3 disabled:opacity-60">
           <Field
             label="Nome"
             value={form.name}
             set={(v) => setForm({ ...form, name: v })}
           />
-          <Field
-            label="E-mail"
-            value={form.email}
-            set={(v) => setForm({ ...form, email: v })}
-          />
+          <label className="block text-sm">E-mail
+            <input required type="email" value={form.email}
+              onChange={e => setForm({...form, email: e.target.value})}
+              className="mt-2 w-full rounded-xl border px-4 py-3" />
+          </label>
           <label className="block text-sm">
             Senha
             <input
@@ -1070,28 +1088,32 @@ function Team({
             </select>
           </label>
           <button
-            disabled={busy}
+            disabled={busy || !canManage}
             className="w-full rounded-xl bg-blue-600 p-3 font-semibold text-white"
           >
             {busy ? "Salvando..." : "Criar usuário"}
           </button>
-        </div>
+        </fieldset>
       </form>
     </div>
   );
 }
 function Integrations({
+  canManage,
   integration,
   org,
   token,
   refresh,
 }: {
+  canManage: boolean;
   integration: Integration | null;
   org: string;
   token: string;
   refresh: () => void;
 }) {
   const [saving, setSaving] = useState(false),
+    [error, setError] = useState(""),
+    [success, setSuccess] = useState(""),
     [form, setForm] = useState({
       openai_model: integration?.openai_model || "gpt-5.6-luna",
       evolution_url: integration?.evolution_url || "",
@@ -1101,6 +1123,9 @@ function Integrations({
     });
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (!canManage || saving) return;
+    setError("");
+    setSuccess("");
     setSaving(true);
     try {
       await apiRequest(
@@ -1109,6 +1134,9 @@ function Integrations({
         token,
       );
       await refresh();
+      setSuccess("Configurações salvas.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Não foi possível salvar as configurações");
     } finally {
       setSaving(false);
     }
@@ -1117,7 +1145,7 @@ function Integrations({
     ["Serper", integration?.serper_configured],
     ["OpenAI", integration?.openai_configured],
     ["Vercel", integration?.vercel_configured],
-    ["Evolution", integration?.evolution_configured],
+    ["Evolution Go", integration?.evolution_configured],
   ] as const;
   return (
     <form
@@ -1134,6 +1162,10 @@ function Integrations({
           </p>
         </div>
       </div>
+      {!canManage && <p className="mb-4 text-sm text-slate-600">Somente administradores podem alterar as configurações.</p>}
+      {error && <p role="alert" className="mb-4 text-sm text-red-600">{error}</p>}
+      {success && <p role="status" className="mb-4 text-sm text-emerald-700">{success}</p>}
+      <fieldset disabled={!canManage || saving}>
       <section
         className={`mb-6 rounded-2xl border p-4 ${form.whatsapp_test_mode ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-slate-50"}`}
       >
@@ -1188,8 +1220,10 @@ function Integrations({
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-sm text-slate-600">
-          Evolution URL
+          URL da Evolution Go
           <input
+            type="url"
+            placeholder="https://evogo.seudominio.com.br"
             value={form.evolution_url}
             onChange={(e) =>
               setForm({ ...form, evolution_url: e.target.value })
@@ -1198,7 +1232,7 @@ function Integrations({
           />
         </label>
         <label className="text-sm text-slate-600">
-          Instância WhatsApp
+          Nome da instância (opcional)
           <input
             value={form.evolution_instance}
             onChange={(e) =>
@@ -1216,12 +1250,14 @@ function Integrations({
           />
         </label>
       </div>
+      <p className="mt-4 text-sm text-slate-500">A chave da instância é configurada em EVOLUTION_API_KEY no servidor. Na Evolution Go, ela identifica a conexão WhatsApp; o nome acima serve apenas como referência. O indicador confirma a configuração, não o estado da conexão.</p>
       <button
-        disabled={saving}
+        disabled={saving || !canManage}
         className="mt-6 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white"
       >
         {saving ? "Salvando..." : "Salvar configurações"}
       </button>
+      </fieldset>
     </form>
   );
 }
