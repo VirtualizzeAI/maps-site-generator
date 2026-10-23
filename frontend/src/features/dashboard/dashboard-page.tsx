@@ -916,19 +916,27 @@ function Reviews({
   token: string;
   refresh: () => void;
 }) {
-  const [busy, setBusy] = useState("");
+  const [busy, setBusy] = useState(""), [error, setError] = useState("");
   async function approve(id: string) {
+    if (busy) return;
+    setError("");
     setBusy(id);
-    await apiRequest(
+    try {
+      await apiRequest(
       `/api/v1/messages/${id}/approve`,
       { method: "POST", body: "{}" },
       token,
     );
-    await refresh();
-    setBusy("");
+      await refresh();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Não foi possível aprovar e enviar a mensagem");
+    } finally {
+      setBusy("");
+    }
   }
   return (
     <div className="space-y-4">
+      {error && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p>}
       {messages.map((m) => (
         <article key={m.id} className="rounded-2xl border bg-white p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -958,7 +966,7 @@ function Reviews({
             {m.content}
           </p>
           <button
-            disabled={busy === m.id}
+            disabled={!!busy}
             onClick={() => approve(m.id)}
             className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white"
           >
@@ -1250,7 +1258,7 @@ function Integrations({
           />
         </label>
       </div>
-      <p className="mt-4 text-sm text-slate-500">A chave da instância é configurada em EVOLUTION_API_KEY no servidor. Na Evolution Go, ela identifica a conexão WhatsApp; o nome acima serve apenas como referência. O indicador confirma a configuração, não o estado da conexão.</p>
+      <p className="mt-4 text-sm text-slate-500">A chave fica em EVOLUTION_API_KEY no servidor. Use a chave da instância ou, com a chave administrativa, informe acima o nome exato da instância. O indicador confirma a configuração, não o estado da conexão.</p>
       <button
         disabled={saving || !canManage}
         className="mt-6 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white"

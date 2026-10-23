@@ -13,7 +13,7 @@ import {
 import { config, sitesDir } from "./config.js";
 import { createUserSchema, integrationPatchSchema, validateTestRecipient } from "./admin-schemas.js";
 import { checkDatabase } from "./database.js";
-import { sendWhatsApp } from "./integrations/whatsapp.js";
+import { sendWhatsApp, WhatsAppDeliveryError } from "./integrations/whatsapp.js";
 import { startWorker } from "./pipeline.js";
 import { store } from "./store.js";
 import { adminClient, authClient } from "./supabase.js";
@@ -54,7 +54,9 @@ app.setErrorHandler((error: unknown, request, reply) => {
       "Erro interno na API",
     );
   const message =
-    status >= 500
+    error instanceof WhatsAppDeliveryError
+      ? error.message
+      : status >= 500
       ? "Erro interno"
       : validation
         ? "Dados inválidos"
@@ -401,6 +403,7 @@ app.get("/api/v1/messages", async (request) => {
     .map((record) => serializeMessage(record, db));
 });
 
+const approvalsInFlight = new Set<string>();
 app.post("/api/v1/messages/:id/approve", async (request) => {
   const user = await currentUser(request),
     messageId = (request.params as { id: string }).id,
@@ -421,6 +424,10 @@ app.post("/api/v1/messages/:id/approve", async (request) => {
   membership(user.id, operation.organization_id, ["admin", "operator"]);
   if (record.status !== "pending_approval")
     throw new ApiError(409, "A mensagem não está aguardando aprovação");
+  if (approvalsInFlight.has(messageId))
+    throw new ApiError(409, "Esta mensagem já está sendo aprovada");
+  approvalsInFlight.add(messageId);
+  try {
   const integration = integrationOf(
       snapshot.integrations,
       operation.organization_id,
@@ -480,6 +487,9 @@ app.post("/api/v1/messages/:id/approve", async (request) => {
     store.snapshot().messages.find((item) => item.id === messageId)!,
     store.snapshot(),
   );
+  } finally {
+    approvalsInFlight.delete(messageId);
+  }
 });
 
 app.get("/api/v1/integrations", async (request) => {

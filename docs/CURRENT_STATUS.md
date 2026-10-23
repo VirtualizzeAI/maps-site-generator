@@ -2,6 +2,12 @@
 
 Última revisão: 23 de outubro de 2026.
 
+## Correção da aprovação e seleção da Evolution Go
+
+- A chave administrativa agora é resolvida para o token da instância exata escolhida no painel ou no ambiente, após recusa de autenticação no envio direto. Chaves de instância continuam funcionando diretamente. Configurar o nome passa a selecionar a conexão quando a chave é administrativa.
+- Aprovação com corpo `{}` usa o conteúdo salvo. Erros conhecidos da Go aparecem no painel e o botão é liberado após falha. Aprovações simultâneas da mesma mensagem são bloqueadas no processo único.
+- Validação: 27 testes e build do backend; lint/build do frontend; aprovação completa contra provedor simulado com persistência, redirecionamento de teste e bloqueio de duplicação. A instância real selecionada autenticou e respondeu conectada em consulta somente leitura. Nenhuma mensagem real foi enviada na validação.
+
 ## Produção e administração — atualização de 23/10
 
 - Backend publicado na VPS com Docker, HTTPS em `https://apimsg.virtualizzeautomacao.com.br`, Supabase e Evolution Go (`POST /send/text`). Ambiente protegido em `/opt/stacks/maps-site-generator/backend.env`. Deploy manual, sem atualização automática ativada.

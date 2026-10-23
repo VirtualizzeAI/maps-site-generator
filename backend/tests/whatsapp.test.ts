@@ -48,6 +48,37 @@ describe("envio pela Evolution Go",()=>{
     await expect(sendWhatsApp("(84) 99999-1234","Olá",integration({evolution_url:"https://go.example",evolution_api_key:"key"}))).rejects.toThrow("sem identificador");
   });
 
+  it("resolve a chave administrativa pela instância escolhida sem perder o redirecionamento de teste",async()=>{
+    realMode();
+    const fetchMock=vi.fn()
+      .mockResolvedValueOnce(new Response("Unauthorized",{status:401}))
+      .mockResolvedValueOnce(new Response(JSON.stringify({data:[{name:"Outra",token:"other-token"},{name:"VirtuCRM",token:"selected-token"}]})))
+      .mockResolvedValueOnce(new Response(JSON.stringify({data:{Info:{ID:"selected-message"}}})));
+    vi.stubGlobal("fetch",fetchMock);
+    const result=await sendWhatsApp("(84) 99999-1234","Olá",integration({evolution_url:"https://go.example",evolution_api_key:"admin-key",evolution_instance:"VirtuCRM",whatsapp_test_mode:true,whatsapp_test_number:"(11) 98888-7777"}));
+    expect(fetchMock.mock.calls[1]).toEqual(["https://go.example/instance/all",{headers:{apikey:"admin-key"}}]);
+    expect(fetchMock.mock.calls[2]?.[1].headers.apikey).toBe("selected-token");
+    expect(JSON.parse(fetchMock.mock.calls[2]?.[1].body).number).toBe("5511988887777");
+    expect(result.providerMessageId).toBe("selected-message");
+  });
+
+  it("não escolhe outra instância se o nome não existir",async()=>{
+    realMode();
+    const fetchMock=vi.fn().mockResolvedValueOnce(new Response("",{status:401}))
+      .mockResolvedValueOnce(new Response(JSON.stringify({data:[{name:"Outra",token:"segredo"}]})));
+    vi.stubGlobal("fetch",fetchMock);
+    await expect(sendWhatsApp("(84) 99999-1234","Olá",integration({evolution_url:"https://go.example",evolution_api_key:"admin-key",evolution_instance:"Inexistente"}))).rejects.toThrow("não encontrada");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("não repete envio após erro ambíguo do provedor",async()=>{
+    realMode();
+    const fetchMock=vi.fn().mockResolvedValue(new Response("erro interno",{status:500}));
+    vi.stubGlobal("fetch",fetchMock);
+    await expect(sendWhatsApp("(84) 99999-1234","Olá",integration({evolution_url:"https://go.example",evolution_api_key:"admin-key",evolution_instance:"VirtuCRM"}))).rejects.toThrow("500");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("modo mock não chama o provedor",async()=>{
     config.mode="mock";
     const fetchMock=vi.fn();vi.stubGlobal("fetch",fetchMock);
