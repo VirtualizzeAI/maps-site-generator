@@ -1,6 +1,6 @@
 # Backend Node.js + TypeScript
 
-API, worker e agendador do Virtualizze Prospector executados no mesmo processo Node.js. Não utiliza Python nem Docker.
+API, worker e agendador do Virtualizze Prospector executados no mesmo processo Node.js. O desenvolvimento local usa Node.js diretamente; produção usa Docker Compose.
 
 ## Desenvolvimento local
 
@@ -17,6 +17,8 @@ O modo padrão `mock` executa o fluxo completo sem consumir APIs: busca empresas
 Configure `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` e `DATABASE_URL`. Para desenvolvimento local e VPS IPv4, use preferencialmente a conexão **Session pooler** mostrada em **Connect** no painel do Supabase.
 
 ## Produção
+
+O deploy automatizado na VPS está descrito em [deploy/README.md](../deploy/README.md). Os comandos abaixo continuam disponíveis para execução direta com Node.js.
 
 ```bash
 npm install
