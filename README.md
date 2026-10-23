@@ -11,7 +11,7 @@ maps-site-generator/
 └── docs/       # arquitetura e padrões
 ```
 
-Todo o sistema utiliza Node.js e TypeScript. Não há dependência de Python ou Docker.
+Todo o sistema utiliza Node.js e TypeScript. O desenvolvimento local dispensa Docker; a produção do backend usa Docker Compose com atualização pelo GitHub Actions. Consulte [deploy/README.md](deploy/README.md).
 
 ## Rodar localmente
 

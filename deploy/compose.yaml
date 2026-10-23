@@ -1,0 +1,30 @@
+name: maps-site-generator
+services:
+  backend:
+    image: ${BACKEND_IMAGE:?Defina BACKEND_IMAGE}
+    init: true
+    restart: unless-stopped
+    env_file: /opt/stacks/maps-site-generator/backend.env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "8000"
+      DATA_DIR: /app/data
+    ports:
+      - "127.0.0.1:18000:8000"
+    volumes:
+      - sites:/app/data
+    stop_grace_period: 60s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8000/health',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 6
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  sites:
