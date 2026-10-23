@@ -18,7 +18,7 @@ maps-site-generator/
 ```
 
 - Frontend e backend possuem dependências e execução independentes.
-- Não há Python ou Docker.
+- Desenvolvimento local em Node.js/TypeScript; produção na VPS preparada com Docker Compose e GitHub Actions, conforme `deploy/README.md`.
 - API, worker e agendador rodam no mesmo processo do backend.
 - A persistência em execução usa PostgreSQL no projeto Supabase `guesnbuiqaazvmkgctjt`.
 - A migration inicial está versionada em `supabase/migrations/`.
@@ -167,7 +167,8 @@ npm run build
 - Ainda não há fila distribuída nem alta disponibilidade.
 - Retentativas, idempotência e recuperação de falhas externas ainda precisam ser fortalecidas.
 - A estratégia atual cria um projeto/deploy da Vercel para cada site; isso deve ser reavaliado antes de escalar o volume.
-- O backend ainda não possui processo definitivo de deploy, monitoramento e execução contínua na VPS.
+- Deploy preparado em `.github/workflows/backend-deploy.yml`, `backend/Dockerfile` e `deploy/`: testes, imagem GHCR, atualização por SSH, healthcheck e tentativa de rollback. Ativação pendente de secrets, ambiente, DNS e acesso ao Docker/proxy; não foi validado em produção.
+- Atualizações reiniciam a única instância e podem interromper operações; drenagem, recuperação do worker e monitoramento externo permanecem pendentes.
 
 ## Próximos passos recomendados
 
@@ -176,7 +177,7 @@ npm run build
 3. Revisar estados de falha, retentativas e retomada de operações interrompidas.
 4. Definir a estratégia de publicação em escala na Vercel.
 5. Configurar as variáveis do Supabase no backend e executar o teste integrado.
-6. Preparar deploy do backend na VPS com processo persistente, logs e monitoramento.
+6. Ativar e validar o deploy preparado do backend na VPS e adicionar monitoramento externo.
 
 ## Decisões que não devem ser presumidas
 
