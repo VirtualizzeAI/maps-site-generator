@@ -74,7 +74,7 @@ maps-site-generator/
   - Serper para Google Maps;
   - OpenAI para gerar o HTML;
   - Vercel para publicação;
-  - Evolution API para WhatsApp.
+  - Evolution Go para WhatsApp (`POST /send/text`, header `apikey` com chave da instância e ID em `data.Info.ID`). Os nomes das variáveis do ambiente foram preservados; `EVOLUTION_INSTANCE` não é exigida no envio.
 - As chaves secretas vêm exclusivamente do `.env` do backend; apenas opções não secretas ficam no banco.
 
 ### Segurança do teste de WhatsApp
@@ -114,6 +114,8 @@ Após os ajustes recentes, ainda deve ser repetido um teste controlado para conf
 - resposta e identificador retornados pela Evolution API.
 
 ## Correções recentes relevantes
+
+- Integração WhatsApp adaptada à Evolution Go, preservando redirecionamento de teste e configurações existentes. Testes do contrato usam fetch simulado; envio real ainda deve ser validado com número de teste confirmado.
 
 - CORS permite `PUT`, `PATCH`, `DELETE` e `OPTIONS`.
 - Requisições sem corpo não enviam `Content-Type: application/json`.
