@@ -88,6 +88,8 @@ type Integration = {
   serper_configured: boolean;
   openai_configured: boolean;
   openai_model: string;
+  site_generation_prompt: string;
+  default_site_generation_prompt: string;
   vercel_configured: boolean;
   evolution_configured: boolean;
   evolution_url: string | null;
@@ -1124,6 +1126,7 @@ function Integrations({
     [success, setSuccess] = useState(""),
     [form, setForm] = useState({
       openai_model: integration?.openai_model || "gpt-5.6-luna",
+      site_generation_prompt: integration?.site_generation_prompt || integration?.default_site_generation_prompt || "",
       evolution_url: integration?.evolution_url || "",
       evolution_instance: integration?.evolution_instance || "",
       whatsapp_test_mode: integration?.whatsapp_test_mode || false,
@@ -1259,6 +1262,33 @@ function Integrations({
         </label>
       </div>
       <p className="mt-4 text-sm text-slate-500">A chave fica em EVOLUTION_API_KEY no servidor. Use a chave da instância ou, com a chave administrativa, informe acima o nome exato da instância. O indicador confirma a configuração, não o estado da conexão.</p>
+      <section aria-labelledby="site-prompt-title" className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+        <h3 id="site-prompt-title" className="font-semibold text-slate-900">Prompt do agente de sites</h3>
+        <p className="mt-2 text-sm text-slate-600">Defina o estilo, as seções, o tom dos textos e as orientações visuais dos sites. As alterações valem para as próximas operações; os sites já publicados não serão alterados.</p>
+        <label className="mt-4 block text-sm font-medium text-slate-700">
+          Instruções para gerar os sites
+          <textarea
+            required
+            minLength={20}
+            maxLength={20000}
+            rows={12}
+            value={form.site_generation_prompt}
+            onChange={e => setForm({...form, site_generation_prompt: e.target.value})}
+            aria-describedby="site-prompt-help"
+            className="mt-2 w-full resize-y rounded-xl border bg-white px-4 py-3 font-mono text-sm leading-6 outline-none focus:border-blue-500"
+          />
+        </label>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+          <button type="button"
+            onClick={() => setForm({...form, site_generation_prompt: integration?.default_site_generation_prompt || ""})}
+            className="rounded-lg border bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
+            Usar prompt padrão
+          </button>
+          <span className="text-xs text-slate-500">{form.site_generation_prompt.length.toLocaleString("pt-BR")} / 20.000 caracteres</span>
+        </div>
+        <p id="site-prompt-help" className="mt-4 text-sm text-slate-600">Variáveis disponíveis: <code>{"{{empresa}}"}</code>, <code>{"{{segmento}}"}</code>, <code>{"{{cidade}}"}</code>, <code>{"{{endereco}}"}</code> e <code>{"{{whatsapp}}"}</code>. Os dados da empresa serão enviados mesmo se você não usar as variáveis. A saída continuará sendo um arquivo HTML completo.</p>
+        <p className="mt-2 text-xs text-slate-500">Clique em Salvar configurações para aplicar o prompt ou restaurar o padrão.</p>
+      </section>
       <button
         disabled={saving || !canManage}
         className="mt-6 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white"

@@ -13,6 +13,7 @@ import {
 import { config, sitesDir } from "./config.js";
 import { createUserSchema, integrationPatchSchema, validateTestRecipient } from "./admin-schemas.js";
 import { checkDatabase } from "./database.js";
+import { DEFAULT_SITE_GENERATION_PROMPT } from "./site-prompt.js";
 import { sendWhatsApp, WhatsAppDeliveryError } from "./integrations/whatsapp.js";
 import { startWorker } from "./pipeline.js";
 import { store } from "./store.js";
@@ -667,6 +668,8 @@ function integrationView(item: IntegrationSettings) {
     serper_configured: !!item.serper_api_key,
     openai_configured: !!item.openai_api_key,
     openai_model: item.openai_model,
+    site_generation_prompt: item.site_generation_prompt || DEFAULT_SITE_GENERATION_PROMPT,
+    default_site_generation_prompt: DEFAULT_SITE_GENERATION_PROMPT,
     vercel_configured: !!item.vercel_token,
     evolution_configured: !!(
       (item.evolution_url || config.evolutionUrl) &&
