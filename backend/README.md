@@ -1,6 +1,6 @@
 # Backend Node.js + TypeScript
 
-API, worker e agendador do Virtualizze Prospector executados no mesmo processo Node.js. Não utiliza Python nem Docker.
+API, worker e agendador do Virtualizze Prospector executados no mesmo processo Node.js. Desenvolvimento local com Node.js diretamente e produção na VPS com Docker.
 
 ## Desenvolvimento local
 
@@ -29,6 +29,8 @@ Para usar as integrações reais, configure as credenciais e defina `INTEGRATION
 Os sites enviados à Vercel são publicados como produção e o sistema salva o alias público (`*.vercel.app`), não a URL protegida de preview. Se a conta estiver configurada para proteger **todos** os deploys, altere o projeto para `Settings > Deployment Protection > Standard Protection` ou `None`; a Vercel aplica essa política acima da API de publicação.
 
 ## Modo global de teste do WhatsApp
+
+O envio real usa Evolution Go: `EVOLUTION_URL` é a URL base, `EVOLUTION_API_KEY` é a chave da instância e `EVOLUTION_INSTANCE` permanece opcional como referência. O endpoint é `POST /send/text`. No painel, administradores podem alterar URL, referência da instância e modo/número de teste. A chave é administrada somente no ambiente do backend, nunca retornada pela API.
 
 O modo pode ser alterado pela tela de configurações. Quando ativo, o destinatário é substituído no backend antes da chamada à Evolution API. A mensagem registra separadamente o telefone original, o número que recebeu o envio e se houve redirecionamento.
 

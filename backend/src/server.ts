@@ -11,6 +11,7 @@ import {
   serializeUser,
 } from "./auth.js";
 import { config, sitesDir } from "./config.js";
+import { createUserSchema, integrationPatchSchema, validateTestRecipient } from "./admin-schemas.js";
 import { checkDatabase } from "./database.js";
 import { sendWhatsApp } from "./integrations/whatsapp.js";
 import { startWorker } from "./pipeline.js";
@@ -494,27 +495,7 @@ app.put("/api/v1/integrations", async (request) => {
   const user = await currentUser(request),
     organizationId = queryString(request.query, "organization_id");
   membership(user.id, organizationId, ["admin"]);
-  const payload = z
-    .object({
-      openai_model: z.string().min(1).optional(),
-      evolution_url: z.string().optional(),
-      evolution_instance: z.string().optional(),
-      whatsapp_test_mode: z.boolean().optional(),
-      whatsapp_test_number: z.string().optional(),
-    })
-    .superRefine((value, context) => {
-      if (
-        value.whatsapp_test_mode === true &&
-        !value.whatsapp_test_number?.replace(/\D/g, "")
-      ) {
-        context.addIssue({
-          code: "custom",
-          path: ["whatsapp_test_number"],
-          message: "Informe um número válido para ativar o modo de teste",
-        });
-      }
-    })
-    .parse(request.body);
+  const payload = integrationPatchSchema.parse(request.body);
   await store.mutate((db) => {
     const integration = integrationOf(db.integrations, organizationId);
     for (const [key, value] of Object.entries(payload)) {
@@ -524,15 +505,12 @@ app.put("/api/v1/integrations", async (request) => {
         (integration as unknown as Record<string, string>)[key] =
           value?.trim() || "";
     }
-    if (
-      integration.whatsapp_test_mode &&
-      !integration.whatsapp_test_number.replace(/\D/g, "")
-    )
-      throw new ApiError(
-        422,
-        "Informe um número válido para ativar o modo de teste",
-      );
+    try { validateTestRecipient(integration); }
+    catch { throw new ApiError(422, "Informe um número válido para ativar o modo de teste"); }
     integration.updated_at = now();
+    db.events.push({id: id(), organization_id: organizationId, operation_id: null,
+      operation_company_id: null, actor_id: user.id, event_type: "integration_settings_updated",
+      payload: {fields: Object.keys(payload)}, created_at: now()});
   });
   return integrationView(
     integrationOf(store.snapshot().integrations, organizationId),
@@ -561,15 +539,7 @@ app.get("/api/v1/users", async (request) => {
 
 app.post("/api/v1/users", async (request) => {
   const current = await currentUser(request),
-    payload = z
-      .object({
-        organization_id: z.string().uuid(),
-        name: z.string().min(2),
-        email: z.email(),
-        password: z.string().min(8),
-        role: z.enum(["admin", "operator", "viewer"]),
-      })
-      .parse(request.body);
+    payload = createUserSchema.parse(request.body);
   membership(current.id, payload.organization_id, ["admin"]);
   if (
     store
@@ -585,8 +555,10 @@ app.post("/api/v1/users", async (request) => {
   });
   if (error || !data.user)
     throw new ApiError(
-      error?.status === 422 ? 409 : 502,
-      "Não foi possível criar o usuário no serviço de autenticação",
+      error?.code === "email_exists" || error?.code === "user_already_exists" ? 409 : error?.status === 422 ? 422 : 502,
+      error?.code === "email_exists" || error?.code === "user_already_exists"
+        ? "Já existe um usuário com este e-mail"
+        : error?.status === 422 ? "Verifique o e-mail e os requisitos de senha" : "Não foi possível criar o usuário no serviço de autenticação",
     );
   const timestamp = now(),
     user = {
@@ -607,6 +579,9 @@ app.post("/api/v1/users", async (request) => {
         created_at: timestamp,
         updated_at: timestamp,
       });
+      db.events.push({id: id(), organization_id: payload.organization_id, operation_id: null,
+        operation_company_id: null, actor_id: current.id, event_type: "user_created",
+        payload: {user_id: user.id, role: payload.role}, created_at: timestamp});
     });
   } catch (reason) {
     await adminClient().auth.admin.deleteUser(user.id);
@@ -684,12 +659,11 @@ function integrationView(item: IntegrationSettings) {
     openai_model: item.openai_model,
     vercel_configured: !!item.vercel_token,
     evolution_configured: !!(
-      item.evolution_url &&
-      item.evolution_api_key &&
-      item.evolution_instance
+      (item.evolution_url || config.evolutionUrl) &&
+      (item.evolution_api_key || config.evolutionApiKey)
     ),
-    evolution_url: item.evolution_url || null,
-    evolution_instance: item.evolution_instance || null,
+    evolution_url: item.evolution_url || config.evolutionUrl || null,
+    evolution_instance: item.evolution_instance || config.evolutionInstance || null,
     whatsapp_test_mode: item.whatsapp_test_mode,
     whatsapp_test_number: item.whatsapp_test_number,
   };
