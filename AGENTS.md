@@ -29,7 +29,7 @@ O Maps Site Generator é um sistema da Virtualizze que:
 ## Decisões obrigatórias
 
 - Manter `frontend/` e `backend/` como aplicações independentes.
-- Usar somente Node.js e TypeScript. Não introduzir Python ou Docker sem nova decisão explícita.
+- Usar somente Node.js e TypeScript. Desenvolvimento local sem Docker; produção do backend na VPS usa Docker Compose e GitHub Actions conforme `deploy/README.md`. Não introduzir Python sem nova decisão explícita.
 - O frontend acessa dados apenas pela API própria do backend.
 - Persistir autenticação e dados no Supabase; o frontend continua acessando dados somente pela API própria.
 - Validar autenticação, organização, função do usuário e acesso ao registro no backend.
