@@ -30,7 +30,9 @@ Os sites enviados à Vercel são publicados como produção e o sistema salva o 
 
 ## Modo global de teste do WhatsApp
 
-O envio real usa Evolution Go: `EVOLUTION_URL` é a URL base, `EVOLUTION_API_KEY` é a chave da instância e `EVOLUTION_INSTANCE` permanece opcional como referência. O endpoint é `POST /send/text`. No painel, administradores podem alterar URL, referência da instância e modo/número de teste. A chave é administrada somente no ambiente do backend, nunca retornada pela API.
+O envio real usa Evolution Go: `EVOLUTION_URL` é a URL base e `EVOLUTION_API_KEY` aceita a chave da instância ou a chave administrativa. Com a chave administrativa, informe o nome exato da instância no painel ou em `EVOLUTION_INSTANCE`. Após uma recusa de autenticação (401), o backend resolve o token por `GET /instance/all` e envia por `POST /send/text` usando somente a instância escolhida. Com uma chave de instância, o nome é opcional. Não há repetição automática após falhas ambíguas de envio. Chaves e tokens nunca são retornados pela API.
+
+A aprovação usa o texto já salvo; o corpo `{}` é válido. Falhas conhecidas da Go são apresentadas no painel, sem expor a resposta do provedor, e o botão permite nova tentativa. Aprovações concorrentes da mesma mensagem são bloqueadas na única instância do backend.
 
 O modo pode ser alterado pela tela de configurações. Quando ativo, o destinatário é substituído no backend antes da chamada à Evolution API. A mensagem registra separadamente o telefone original, o número que recebeu o envio e se houve redirecionamento.
 
