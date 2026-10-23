@@ -1,6 +1,6 @@
 # Estado atual do Maps Site Generator
 
-Última revisão: 21 de setembro de 2026.
+Última revisão: 23 de outubro de 2026.
 
 Este documento é o ponto de retomada para novas sessões de desenvolvimento. Antes de implementar algo, confirme o estado real do código e o histórico do Git.
 
@@ -87,6 +87,9 @@ maps-site-generator/
 
 ### Publicação na Vercel
 
+- O painel Next.js está preparado para um projeto Vercel com Root Directory `frontend`; `frontend/vercel.json` executa lint e build.
+- O deploy do painel exige `NEXT_PUBLIC_API_URL` com a URL HTTPS pública do backend; o build na Vercel recusa configuração ausente, inválida ou de loopback.
+- O procedimento de deploy, CORS e verificação está em `frontend/README.md`. A publicação e a validação integrada dependem dos domínios reais do painel e da API e do backend acessível com Supabase funcionando.
 - O backend cria deploy com `target: "production"`.
 - Aguarda o deploy chegar a `READY`.
 - Salva o alias público `*.vercel.app`, não a URL protegida de preview.

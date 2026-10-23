@@ -1,4 +1,5 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:8000")
+  .replace(/\/+$/, "");
 export const TOKEN_KEY = "virtualizze_access_token";
 export const REFRESH_TOKEN_KEY = "virtualizze_refresh_token";
 let refreshPromise: Promise<{
