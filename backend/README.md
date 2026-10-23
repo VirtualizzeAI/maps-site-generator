@@ -26,7 +26,7 @@ npm start
 
 Para usar as integrações reais, configure as credenciais e defina `INTEGRATIONS_MODE=real`. Serper, OpenAI, Vercel e a chave da Evolution permanecem exclusivamente no `.env` do backend.
 
-Os sites enviados à Vercel são publicados como produção e o sistema salva o alias público (`*.vercel.app`), não a URL protegida de preview. Se a conta estiver configurada para proteger **todos** os deploys, altere o projeto para `Settings > Deployment Protection > Standard Protection` ou `None`; a Vercel aplica essa política acima da API de publicação.
+Os sites enviados à Vercel são publicados como produção. Para cada projeto de site gerado, o backend desativa Vercel Authentication com `PATCH /v9/projects/{id}` e `ssoProtection: null`. Antes de liberar o link, verifica o alias sem autenticação, cookies ou bypass e exige HTTP 200. Se a conta recusar a configuração ou o endereço continuar protegido/inacessível, a etapa falha e o link não segue para envio. Isso não altera a proteção do painel nem de outros projetos da conta.
 
 ## Modo global de teste do WhatsApp
 

@@ -2,6 +2,13 @@
 
 Última revisão: 23 de outubro de 2026.
 
+## Sites demonstrativos públicos
+
+- Cada novo projeto de site gerado recebe `ssoProtection: null` pela API da Vercel. O backend verifica o alias anonimamente antes de concluir a publicação; falhas de permissão ou acesso impedem liberar o link para envio.
+- A alteração é restrita ao projeto gerado e não modifica as configurações globais da conta ou a proteção do painel.
+- Validação automatizada: 29 testes e build do backend, incluindo recusa da alteração de proteção e redirecionamento para login.
+- Validação real: site estático temporário publicado na conta Vercel; HTTP 200 e HTML esperado confirmados anonimamente, sem login. Projeto temporário removido após o teste.
+
 ## Correção da aprovação e seleção da Evolution Go
 
 - A chave administrativa agora é resolvida para o token da instância exata escolhida no painel ou no ambiente, após recusa de autenticação no envio direto. Chaves de instância continuam funcionando diretamente. Configurar o nome passa a selecionar a conexão quando a chave é administrativa.

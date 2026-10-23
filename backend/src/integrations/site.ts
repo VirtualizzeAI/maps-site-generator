@@ -14,6 +14,7 @@ type VercelDeployment = {
   errorCode?: string;
   errorMessage?: string;
   id: string;
+  projectId?: string;
   readyState?: "BUILDING"|"CANCELED"|"ERROR"|"INITIALIZING"|"QUEUED"|"READY";
   target?: "production"|"staging"|null;
   url: string;
@@ -42,6 +43,14 @@ export async function publishToVercel(slug:string,html:string,token:string,fetch
   if(!response.ok)throw new Error(`Vercel retornou ${response.status}`);
 
   let deployment=await response.json() as VercelDeployment;
+  // Projetos criados pela API podem herdar Vercel Authentication. Cada site
+  // demonstrativo deve ficar público, independentemente do padrão da conta.
+  const protection=await fetcher(`https://api.vercel.com/v9/projects/${encodeURIComponent(deployment.projectId||slug)}`,{
+    method:"PATCH",
+    headers:vercelHeaders(token),
+    body:JSON.stringify({ssoProtection:null}),
+  });
+  if(!protection.ok)throw new Error(`Não foi possível tornar o site público na Vercel (HTTP ${protection.status})`);
   for(let attempt=0;attempt<30&&deployment.readyState!=="READY";attempt+=1){
     if(deployment.readyState==="ERROR"||deployment.readyState==="CANCELED"){
       throw new Error(deployment.errorMessage||`Deploy da Vercel terminou como ${deployment.readyState}`);
@@ -53,7 +62,18 @@ export async function publishToVercel(slug:string,html:string,token:string,fetch
   }
   if(deployment.readyState!=="READY")throw new Error("O deploy da Vercel não ficou pronto dentro do tempo esperado");
 
-  return {url:publicDeploymentUrl(deployment,slug),deploymentId:deployment.id,slug};
+  const url=publicDeploymentUrl(deployment,slug);
+  let accessible=false;
+  for(let attempt=0;attempt<5;attempt+=1){
+    // Sem Authorization, cookies ou bypass: valida o acesso do destinatário.
+    const publicResponse=await fetcher(url,{redirect:"manual",signal:AbortSignal.timeout(10000)});
+    accessible=publicResponse.status===200;
+    await publicResponse.body?.cancel();
+    if(accessible)break;
+    if(attempt<4)await wait(1000);
+  }
+  if(!accessible)throw new Error("O site não está acessível publicamente. Confira Deployment Protection na Vercel antes de enviar o link.");
+  return {url,deploymentId:deployment.id,slug};
 }
 
 export async function createSite(candidate:SearchCandidate,integration:IntegrationSettings){
