@@ -685,8 +685,7 @@ function integrationView(item: IntegrationSettings) {
     vercel_configured: !!item.vercel_token,
     evolution_configured: !!(
       item.evolution_url &&
-      item.evolution_api_key &&
-      item.evolution_instance
+      item.evolution_api_key
     ),
     evolution_url: item.evolution_url || null,
     evolution_instance: item.evolution_instance || null,
@@ -721,3 +720,4 @@ function serializeMessage(record: Message, db: Database) {
 
 startWorker();
 await app.listen({ port: config.port, host: config.host });
+
