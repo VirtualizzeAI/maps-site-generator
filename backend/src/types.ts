@@ -34,6 +34,7 @@ export interface IntegrationSettings {
   serper_api_key: string;
   openai_api_key: string;
   openai_model: string;
+  site_generation_prompt: string;
   vercel_token: string;
   evolution_url: string;
   evolution_api_key: string;

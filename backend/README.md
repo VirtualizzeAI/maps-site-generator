@@ -44,3 +44,11 @@ WHATSAPP_TEST_NUMBER=5584999999999
 ```
 
 Mudanças feitas pela interface ficam salvas no Supabase e são usadas nas próximas mensagens.
+
+## Prompt do agente de sites
+
+Administradores podem editar o prompt em **Configurações → Prompt do agente de sites**, salvá-lo por organização ou restaurar o padrão. O campo aceita de 20 a 20.000 caracteres e as variáveis `{{empresa}}`, `{{segmento}}`, `{{cidade}}`, `{{endereco}}` e `{{whatsapp}}`.
+
+O prompt é enviado como `instructions` na geração real; os dados da empresa também são enviados em `input`, mesmo sem variáveis. A saída continua sendo um documento HTML completo. O modo `mock` mantém seu template estático. Alterações valem para operações iniciadas após o salvamento e não modificam sites existentes.
+
+A migration `202610230001_site_generation_prompt.sql` adiciona a coluna à tabela `integration_settings`; organizações sem personalização usam o prompt padrão do backend. Aplicar antes de implantar esta versão. A edição usa o endpoint de configurações existente, exige administrador da organização e gera auditoria.

@@ -2,6 +2,14 @@
 
 Última revisão: 23 de outubro de 2026.
 
+## Prompt editável do agente de sites
+
+- Configurações inclui editor de prompt, variáveis da empresa, contador de caracteres e restauração do padrão. Somente administradores podem salvar; o prompt é persistido por organização.
+- Geração real usa as instruções salvas e continua recebendo os dados da empresa separadamente e exigindo HTML completo. Operações iniciadas após o salvamento usam a nova configuração; sites já publicados não são alterados. Modo mock continua com template estático.
+- Migration `202610230001_site_generation_prompt.sql` adiciona o campo à tabela `integration_settings`, preservando o padrão para organizações sem personalização. Aplicada ao banco de produção antes do deploy do backend.
+- Validação: 35 testes e build do backend, lint/build do frontend e testes no navegador de edição, salvamento, restauração e restrição por perfil. Não foram necessárias gerações pagas nem envios de WhatsApp.
+- API de produção validada em organizações temporárias: persistência e recarga do prompt, uso pelo gerador, isolamento entre organizações, restrição por perfil, limites e restauração. Fixtures removidas ao final.
+
 ## Sites demonstrativos públicos
 
 - Cada novo projeto de site gerado recebe `ssoProtection: null` pela API da Vercel. O backend verifica o alias anonimamente antes de concluir a publicação; falhas de permissão ou acesso impedem liberar o link para envio.
