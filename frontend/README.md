@@ -55,3 +55,7 @@ Mantenha `DATABASE_URL`, as chaves do Supabase e as credenciais das integraçõe
 Referências: [projetos em monorepositórios na Vercel](https://vercel.com/docs/monorepos) e [variáveis de ambiente do Next.js](https://nextjs.org/docs/app/guides/environment-variables).
 
 O navegador usa o token de autenticação emitido pela API Fastify e chama o backend Node.js pela URL configurada em `NEXT_PUBLIC_API_URL`. Nesta fase, o frontend não acessa Supabase nem qualquer banco diretamente.
+
+## Confirmação de ações
+
+O layout inclui `ActionNotifications`, com modal de resultado acessível e fila de notificações. Os handlers de ações explícitas usam `useActionNotification` para informar sucesso ou erro com mensagem contextual. Não registrar notificações nos métodos compartilhados de leitura ou no polling, para evitar interrupções repetidas. O modal permanece disponível durante navegação e informa falhas parciais de arquivamento em lote.

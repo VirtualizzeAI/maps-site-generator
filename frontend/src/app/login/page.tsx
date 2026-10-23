@@ -4,8 +4,10 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2, Radar } from "lucide-react";
 import { login } from "@/services/auth";
+import { useActionNotification } from "@/components/action-notifications";
 
 export default function LoginPage() {
+  const notify = useActionNotification();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,11 +19,13 @@ export default function LoginPage() {
     setError("");
     try {
       await login(email, password);
+      notify({ variant: "success", title: "Acesso confirmado", description: "Você entrou no sistema com sucesso." });
       router.replace("/");
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "Não foi possível entrar",
       );
+      notify({ variant: "error", title: "Não foi possível entrar", description: cause instanceof Error ? cause.message : "Confira o e-mail e a senha e tente novamente." });
     } finally {
       setLoading(false);
     }

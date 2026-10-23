@@ -2,6 +2,13 @@
 
 Última revisão: 23 de outubro de 2026.
 
+## Confirmações visuais das ações
+
+- Modal global de sucesso/erro nas ações de login, criação de usuários, salvamento das configurações/prompt, criação/agendamento de operações, aprovação de mensagens e arquivamento de empresas/operações, incluindo o detalhe da operação.
+- Ícones e cores distinguem o resultado; o modal pode ser fechado por Entendi, botão de fechar ou Escape. Mantém foco de teclado e permanece disponível durante mudanças de rota. Notificações simultâneas são apresentadas em fila.
+- Arquivamentos em lote informam a quantidade concluída quando ocorre uma falha parcial. Atualizações automáticas e navegação não geram modais.
+- Validação: lint/build do frontend e testes no navegador dos resultados das ações, tentativa após falha, foco/teclado, navegação, arquivamento parcial, ausência de modais em polling e layout mobile. Requisições dos testes foram simuladas; nenhuma mensagem ou alteração de dados operacionais foi executada.
+
 ## Prompt editável do agente de sites
 
 - Configurações inclui editor de prompt, variáveis da empresa, contador de caracteres e restauração do padrão. Somente administradores podem salvar; o prompt é persistido por organização.

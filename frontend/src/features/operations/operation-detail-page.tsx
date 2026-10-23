@@ -32,6 +32,7 @@ import type { OperationCompany, OperationDetail } from "./types";
 import { clearToken, getToken } from "@/services/api/client";
 import { me, type CurrentUser } from "@/services/auth";
 import { useSidebarCollapse } from "@/hooks/use-sidebar-collapse";
+import { useActionNotification } from "@/components/action-notifications";
 
 const statusLabels: Record<string, string> = {
   found: "Localizada",
@@ -51,6 +52,7 @@ const statusLabels: Record<string, string> = {
 };
 
 export function OperationDetailPage({ operationId }: { operationId: string }) {
+  const notify = useActionNotification();
   const router = useRouter(),
     token = getToken();
   const { collapsed: sidebarCollapsed, toggleCollapsed } = useSidebarCollapse();
@@ -109,6 +111,7 @@ export function OperationDetailPage({ operationId }: { operationId: string }) {
       return;
     try {
       await archiveOperation(token, operation.id);
+      notify({ variant: "success", title: "Operação arquivada", description: "O histórico das empresas foi preservado." });
       router.replace("/");
     } catch (reason) {
       setError(
@@ -116,6 +119,7 @@ export function OperationDetailPage({ operationId }: { operationId: string }) {
           ? reason.message
           : "Não foi possível arquivar a operação",
       );
+      notify({ variant: "error", title: "Não foi possível arquivar a operação", description: reason instanceof Error ? reason.message : "Tente novamente em alguns instantes." });
     }
   }
   if (loading)
