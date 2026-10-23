@@ -27,6 +27,7 @@ import {
   X,
 } from "lucide-react";
 import { apiRequest, clearToken, getToken } from "@/services/api/client";
+import { useActionNotification } from "@/components/action-notifications";
 import { me, type CurrentUser } from "@/services/auth";
 import {
   createOperation,
@@ -514,6 +515,7 @@ function OperationTable({
   refresh: () => Promise<void>;
   onError: (message: string) => void;
 }) {
+  const notify = useActionNotification();
   const router = useRouter(),
     token = getToken(),
     canArchive = useCanArchive(),
@@ -535,12 +537,14 @@ function OperationTable({
         token,
       );
       await refresh();
+      notify({ variant: "success", title: "Operação arquivada", description: "O histórico das empresas foi preservado." });
     } catch (reason) {
       onError(
         reason instanceof Error
           ? reason.message
           : "Não foi possível arquivar a operação",
       );
+      notify({ variant: "error", title: "Não foi possível arquivar a operação", description: reason instanceof Error ? reason.message : "Tente novamente em alguns instantes." });
     } finally {
       setBusy("");
     }
@@ -636,6 +640,7 @@ function Companies({
   refresh: () => Promise<void>;
   onError: (message: string) => void;
 }) {
+  const notify = useActionNotification();
   const token = getToken(),
     canArchive = useCanArchive(),
     [busy, setBusy] = useState(""),
@@ -670,12 +675,14 @@ function Companies({
       );
       setSelected((current) => current.filter((id) => id !== company.id));
       await refresh();
+      notify({ variant: "success", title: "Empresa arquivada", description: `${company.name} foi arquivada. O histórico para evitar contatos duplicados foi preservado.` });
     } catch (reason) {
       onError(
         reason instanceof Error
           ? reason.message
           : "Não foi possível arquivar a empresa",
       );
+      notify({ variant: "error", title: "Não foi possível arquivar a empresa", description: reason instanceof Error ? reason.message : "Tente novamente em alguns instantes." });
     } finally {
       setBusy("");
     }
@@ -690,6 +697,7 @@ function Companies({
     )
       return;
     setArchivingSelected(true);
+    let archived = 0;
     try {
       for (const company of selectedCompanies) {
         await apiRequest(
@@ -697,15 +705,18 @@ function Companies({
           { method: "DELETE" },
           token,
         );
+        archived++;
       }
       setSelected([]);
       await refresh();
+      notify({ variant: "success", title: "Empresas arquivadas", description: `${archived} empresa${archived === 1 ? " foi arquivada" : "s foram arquivadas"}. O histórico foi preservado.` });
     } catch (reason) {
       onError(
         reason instanceof Error
           ? reason.message
           : "Não foi possível arquivar as empresas selecionadas",
       );
+      notify({ variant: "error", title: "O arquivamento não foi concluído", description: `${archived} de ${selectedCompanies.length} empresas foram arquivadas. ${reason instanceof Error ? reason.message : "Tente novamente para as empresas restantes."}` });
       await refresh();
     } finally {
       setArchivingSelected(false);
@@ -918,6 +929,7 @@ function Reviews({
   token: string;
   refresh: () => void;
 }) {
+  const notify = useActionNotification();
   const [busy, setBusy] = useState(""), [error, setError] = useState("");
   async function approve(id: string) {
     if (busy) return;
@@ -930,8 +942,10 @@ function Reviews({
       token,
     );
       await refresh();
+      notify({ variant: "success", title: "Mensagem aprovada e enviada", description: "O envio foi confirmado pelo provedor e registrado no histórico." });
     } catch (error) {
       setError(error instanceof Error ? error.message : "Não foi possível aprovar e enviar a mensagem");
+      notify({ variant: "error", title: "Não foi possível aprovar e enviar", description: error instanceof Error ? error.message : "Confira a conexão do WhatsApp e tente novamente." });
     } finally {
       setBusy("");
     }
@@ -998,6 +1012,7 @@ function Team({
   token: string;
   refresh: () => void;
 }) {
+  const notify = useActionNotification();
   const [form, setForm] = useState({
       name: "",
       email: "",
@@ -1024,9 +1039,11 @@ function Team({
     );
       setForm({ name: "", email: "", password: "", role: "operator" });
       setSuccess("Usuário criado. Ele já pode entrar com o e-mail e a senha definidos.");
+      notify({ variant: "success", title: "Usuário criado", description: "Ele já pode entrar com o e-mail e a senha definidos." });
       await refresh();
     } catch (error) {
       setError(error instanceof Error ? error.message : "Não foi possível criar o usuário");
+      notify({ variant: "error", title: "Não foi possível criar o usuário", description: error instanceof Error ? error.message : "Verifique os dados e tente novamente." });
     } finally {
       setBusy(false);
     }
@@ -1121,6 +1138,7 @@ function Integrations({
   token: string;
   refresh: () => void;
 }) {
+  const notify = useActionNotification();
   const [saving, setSaving] = useState(false),
     [error, setError] = useState(""),
     [success, setSuccess] = useState(""),
@@ -1146,8 +1164,10 @@ function Integrations({
       );
       await refresh();
       setSuccess("Configurações salvas.");
+      notify({ variant: "success", title: "Configurações salvas", description: "Suas alterações foram salvas. O prompt será usado nas próximas operações." });
     } catch (error) {
       setError(error instanceof Error ? error.message : "Não foi possível salvar as configurações");
+      notify({ variant: "error", title: "Não foi possível salvar as configurações", description: error instanceof Error ? error.message : "Verifique os campos e tente novamente." });
     } finally {
       setSaving(false);
     }
@@ -1310,6 +1330,7 @@ function NewOperation({
   close: () => void;
   done: () => void;
 }) {
+  const notify = useActionNotification();
   const [form, setForm] = useState({
       niche: "Barbearias",
       city: "Mossoró",
@@ -1324,7 +1345,7 @@ function NewOperation({
     e.preventDefault();
     setBusy(true);
     try {
-      await createOperation(token, {
+      const created = await createOperation(token, {
         ...form,
         organization_id: org,
         scheduled_for: form.scheduled_for
@@ -1332,8 +1353,10 @@ function NewOperation({
           : undefined,
       });
       done();
+      notify({ variant: "success", title: created.status === "scheduled" ? "Operação agendada" : "Operação criada", description: "Acompanhe o andamento na aba Operações." });
     } catch (c) {
       setError(c instanceof Error ? c.message : "Falha ao criar");
+      notify({ variant: "error", title: "Não foi possível criar a operação", description: c instanceof Error ? c.message : "Verifique os dados e tente novamente." });
       setBusy(false);
     }
   }
