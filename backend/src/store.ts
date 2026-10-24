@@ -124,6 +124,7 @@ const tables: TableConfig[] = [
       "discard_reason",
       "score",
       "generated_site_url",
+      "site_generation_usage",
       "final_message",
       "created_at",
       "updated_at",

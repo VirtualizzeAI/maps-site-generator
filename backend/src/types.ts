@@ -1,3 +1,4 @@
+import type { SiteGenerationUsage } from "./site-usage.js";
 export type Role = "admin" | "operator" | "viewer";
 export type ApprovalMode = "automatic" | "human_review";
 export type OperationStatus =
@@ -107,6 +108,7 @@ export interface OperationCompany {
   discard_reason: string | null;
   score: number | null;
   generated_site_url: string | null;
+  site_generation_usage?: SiteGenerationUsage | null;
   final_message: string | null;
   created_at: string;
   updated_at: string;

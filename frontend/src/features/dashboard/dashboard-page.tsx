@@ -1,5 +1,6 @@
 "use client";
 
+import { SiteUsage, GenerationCostSummary, type SiteGenerationUsage, type GenerationTotals } from "@/components/site-generation-usage";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -41,6 +42,7 @@ import { useSidebarCollapse } from "@/hooks/use-sidebar-collapse";
 type View =
   "overview" | "operations" | "companies" | "reviews" | "users" | "settings";
 type Summary = {
+  generation_totals?: GenerationTotals;
   companies: number;
   operations: number;
   sites_generated: number;
@@ -57,6 +59,7 @@ type CompanyOperation = {
   status: string;
   listed_at: string;
   generated_site_url: string | null;
+  site_generation_usage?: SiteGenerationUsage | null;
 };
 type Company = {
   id: string;
@@ -454,6 +457,7 @@ function Overview({
           tone="bg-violet-50 text-violet-600"
         />
       </div>
+      <GenerationCostSummary totals={summary?.generation_totals} allTime />
       {active && (
         <section className="mt-6 rounded-2xl bg-[#0b1b2d] p-6 text-white">
           <div className="flex items-center gap-3">
@@ -900,6 +904,7 @@ function Companies({
                           )}
                         </span>
                       </button>
+                      {(operation.site_generation_usage || operation.generated_site_url) && <div className="w-full"><SiteUsage usage={operation.site_generation_usage} /></div>}
                       {operation.generated_site_url && (
                         <a
                           href={operation.generated_site_url}

@@ -22,6 +22,7 @@ import { processOperation } from "../src/pipeline.js";
 import { store } from "../src/store.js";
 import { searchCompanies } from "../src/integrations/search.js";
 import { createSite } from "../src/integrations/site.js";
+import { siteUsage } from "../src/site-usage.js";
 
 const started = Date.parse("2026-10-23T12:00:00.000Z");
 const candidates: SearchCandidate[] = [1,2].map(n=>({name:`Empresa ${n}`,category:"Teste",city:"Mossoró",address:null,phone:`558499999000${n}`,other_phones:[],email:null,website:null,maps_url:null,social_links:[],source_id:`source-${n}`,raw_data:{}}));
@@ -36,6 +37,17 @@ beforeEach(()=>{
 afterEach(()=>vi.useRealTimers());
 
 describe("intervalo no processamento das operações",()=>{
+  it("preserva uso pago quando a publicação falha e não envia mensagens",async()=>{
+    vi.mocked(createSite).mockImplementation(async (_candidate,_settings,onUsage)=>{
+      await onUsage?.(siteUsage({usage:{input_tokens:1000,output_tokens:500}},"gpt-6-sol"));
+      throw new Error("Publicação indisponível");
+    });
+    await processOperation("operation");
+    expect(fixture.db.operationCompanies).toHaveLength(2);
+    expect(fixture.db.operationCompanies.every(item=>item.status==="failed"&&item.site_generation_usage?.estimated_cost_usd===0.007)).toBe(true);
+    expect(fixture.db.events.filter(item=>item.event_type==="site_generation_usage_recorded")).toHaveLength(2);
+    expect(fixture.sendTimes).toHaveLength(0);
+  });
   it("aguarda entre envios e não adiciona espera após o último",async()=>{
     const work=processOperation("operation");await vi.advanceTimersByTimeAsync(0);
     expect(fixture.sendTimes).toEqual([started]);
