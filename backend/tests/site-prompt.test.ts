@@ -56,7 +56,7 @@ describe("integração do prompt com a geração", () => {
     const settings: IntegrationSettings = {
       organization_id:"fixture",openai_api_key:"fixture-key",openai_model:"fixture-model",
       site_generation_prompt:"Crie um site de luxo para {{empresa}} com fundo bege e três seções.",
-      serper_api_key:"",vercel_token:"fixture-token",evolution_url:"",evolution_api_key:"",
+      automatic_send_interval_seconds:0,serper_api_key:"",vercel_token:"fixture-token",evolution_url:"",evolution_api_key:"",
       evolution_instance:"",whatsapp_test_mode:true,whatsapp_test_number:"",updated_at:"",
     };
     const fetcher=vi.fn<typeof fetch>().mockImplementation(async (url) => {

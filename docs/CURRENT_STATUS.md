@@ -2,6 +2,13 @@
 
 Última revisão: 23 de outubro de 2026.
 
+## Intervalo entre envios totalmente automáticos
+
+- Configurações inclui intervalo de 0 a 3.600 segundos, persistido por organização e editável somente por administradores. O padrão 0 desativa a espera.
+- Worker respeita o tempo mínimo desde o último envio automático bem-sucedido da organização, inclusive entre operações. Geração de sites conta no tempo decorrido. Aprovação humana não é atrasada; primeiro envio sem histórico e fim da operação não recebem espera extra.
+- Espera fica fora da fila de gravação, com etapa visível e evento de auditoria. Ajustes do intervalo são reavaliados a cada segundo antes do próximo envio.
+- Migration `202610230002_automatic_send_interval.sql` aplicada ao banco antes do deploy. Validação: 48 testes e build do backend; lint/build do frontend; navegador para configuração, validação, erro/nova tentativa e mobile; API com persistência, limites e permissões em organizações temporárias. Temporização do pipeline validada com relógio simulado, sem disparar operações ou mensagens reais.
+
 ## Edição das mensagens pendentes de aprovação
 
 - Aprovações inclui editor por mensagem com salvamento, cancelamento, contador de caracteres e preservação de parágrafos. Salvar não envia; a aprovação usa o texto já salvo. O rascunho é preservado durante polling e falhas de gravação.

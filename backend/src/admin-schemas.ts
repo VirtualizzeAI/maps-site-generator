@@ -11,6 +11,7 @@ export const createUserSchema = z.object({
 export const integrationPatchSchema = z.object({
   openai_model: z.string().trim().min(1).optional(),
   site_generation_prompt: z.string().trim().min(20).max(20000).optional(),
+  automatic_send_interval_seconds: z.number().int().min(0).max(3600).optional(),
   evolution_url: z.string().trim().refine((value) => {
     if (!value) return true;
     try {
