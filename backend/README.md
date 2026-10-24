@@ -52,3 +52,9 @@ Administradores podem editar o prompt em **Configurações → Prompt do agente 
 O prompt é enviado como `instructions` na geração real; os dados da empresa também são enviados em `input`, mesmo sem variáveis. A saída continua sendo um documento HTML completo. O modo `mock` mantém seu template estático. Alterações valem para operações iniciadas após o salvamento e não modificam sites existentes.
 
 A migration `202610230001_site_generation_prompt.sql` adiciona a coluna à tabela `integration_settings`; organizações sem personalização usam o prompt padrão do backend. Aplicar antes de implantar esta versão. A edição usa o endpoint de configurações existente, exige administrador da organização e gera auditoria.
+
+## Edição de mensagens para aprovação
+
+Administradores e operadores podem editar mensagens com status `pending_approval` em **Aprovações → Editar mensagem**. Salvar atualiza o texto da mensagem e o histórico da empresa, gera auditoria e mantém a aprovação pendente, sem chamar o WhatsApp. A aprovação posterior usa o texto salvo.
+
+O endpoint `PATCH /api/v1/messages/:id` aceita `content` (1 a 4.000 caracteres, preservando parágrafos) e `expected_updated_at`, a versão recebida na listagem. Versões antigas retornam 409, assim como alterações durante envio ou em mensagens já enviadas. Registros arquivados não podem ser editados; destinatário e status não são alteráveis pelo endpoint. O mesmo bloqueio por mensagem protege edição e aprovação na instância única do backend. Não há migration adicional.

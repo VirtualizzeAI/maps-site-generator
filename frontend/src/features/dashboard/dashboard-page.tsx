@@ -15,12 +15,14 @@ import {
   MapPin,
   Menu,
   MessageSquareText,
+  Pencil,
   Phone,
   PanelLeftClose,
   PanelLeftOpen,
   Play,
   Radar,
   Settings,
+  Save,
   ShieldCheck,
   Trash2,
   Users,
@@ -83,6 +85,7 @@ type Message = {
   status: string;
   site_url: string | null;
   created_at: string;
+  updated_at: string;
 };
 type Integration = {
   mode: string;
@@ -340,9 +343,11 @@ export function DashboardPage() {
           )}{" "}
           {view === "reviews" && (
             <Reviews
+              canManage={org.role === "admin" || org.role === "operator"}
               messages={messages.filter((m) => m.status === "pending_approval")}
               token={token}
               refresh={() => refresh(user, token)}
+              onMessageSaved={updated => setMessages(current => current.map(item => item.id === updated.id ? updated : item))}
             />
           )}{" "}
           {view === "users" && (
@@ -921,18 +926,48 @@ function Companies({
   );
 }
 function Reviews({
+  canManage,
   messages,
   token,
   refresh,
+  onMessageSaved,
 }: {
+  canManage: boolean;
   messages: Message[];
   token: string;
-  refresh: () => void;
+  refresh: () => Promise<void>;
+  onMessageSaved: (message: Message) => void;
 }) {
   const notify = useActionNotification();
-  const [busy, setBusy] = useState(""), [error, setError] = useState("");
+  const [busy, setBusy] = useState(""), [error, setError] = useState(""),
+    [saving, setSaving] = useState(false),
+    [editing, setEditing] = useState<{id: string; content: string; updated_at: string} | null>(null);
+  const editingPending = !!editing && messages.some(message => message.id === editing.id);
+  async function saveMessage() {
+    if (!editingPending || !editing || busy || !canManage) return;
+    const draft = editing;
+    setError("");
+    setBusy(draft.id);
+    setSaving(true);
+    try {
+      const updated = await apiRequest<Message>(`/api/v1/messages/${draft.id}`, {
+        method: "PATCH", body: JSON.stringify({content: draft.content, expected_updated_at: draft.updated_at}),
+      }, token);
+      onMessageSaved(updated);
+      setEditing(null);
+      notify({variant: "success", title: "Mensagem salva", description: "O texto foi atualizado e continua aguardando aprovação. Nenhuma mensagem foi enviada."});
+      await refresh();
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : "Não foi possível salvar a mensagem";
+      setError(message);
+      notify({variant: "error", title: "Não foi possível salvar a mensagem", description: message});
+    } finally {
+      setBusy("");
+      setSaving(false);
+    }
+  }
   async function approve(id: string) {
-    if (busy) return;
+    if (busy || editingPending || !canManage) return;
     setError("");
     setBusy(id);
     try {
@@ -963,7 +998,7 @@ function Reviews({
               </p>
               {m.test_mode && (
                 <p className="mt-1 text-xs font-semibold text-amber-700">
-                  Modo de teste: envio realizado para {m.delivery_recipient}
+                  Modo de teste: o envio será redirecionado para {m.delivery_recipient}
                 </p>
               )}
             </div>
@@ -978,21 +1013,48 @@ function Reviews({
               </a>
             )}
           </div>
-          <p className="my-5 rounded-xl bg-slate-50 p-4 text-sm leading-6">
+          {editing?.id === m.id ? (
+            <div className="my-5 rounded-xl border border-blue-200 bg-blue-50/40 p-4">
+              <label htmlFor={`message-content-${m.id}`} className="text-sm font-semibold text-slate-700">Texto da mensagem</label>
+              <textarea id={`message-content-${m.id}`} rows={7} maxLength={4000}
+                value={editing.content} disabled={!!busy}
+                onChange={event => setEditing({...editing, content: event.target.value})}
+                className="mt-2 w-full resize-y rounded-xl border bg-white px-4 py-3 text-sm leading-6 outline-none focus:border-blue-500" />
+              <p className="mt-2 text-xs text-slate-500">{editing.content.length.toLocaleString("pt-BR")} / 4.000 caracteres. Salve as alterações antes de aprovar.</p>
+              {editing.updated_at !== m.updated_at && <p role="alert" className="mt-2 text-sm text-amber-700">Esta mensagem foi alterada por outro usuário. Cancele e reabra a edição para carregar o texto atual.</p>}
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button type="button" onClick={saveMessage}
+                  disabled={!!busy || !editing.content.trim() || editing.updated_at !== m.updated_at}
+                  className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                  {saving && busy === m.id ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  {saving && busy === m.id ? "Salvando..." : "Salvar mensagem"}
+                </button>
+                <button type="button" disabled={!!busy} onClick={() => { setEditing(null); setError(""); }}
+                  className="rounded-xl border bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Cancelar</button>
+              </div>
+            </div>
+          ) : <p className="my-5 whitespace-pre-wrap rounded-xl bg-slate-50 p-4 text-sm leading-6">
             {m.content}
-          </p>
+          </p>}
+          <div className="flex flex-wrap gap-3">
+          {canManage && editing?.id !== m.id && <button type="button" disabled={!!busy || editingPending}
+            onClick={() => {setError("");setEditing({id: m.id, content: m.content, updated_at: m.updated_at});}}
+            className="flex items-center gap-2 rounded-xl border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 disabled:opacity-50">
+            <Pencil size={16} /> Editar mensagem
+          </button>}
           <button
-            disabled={!!busy}
+            disabled={!!busy || editingPending || !canManage}
             onClick={() => approve(m.id)}
-            className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white"
+            className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {busy === m.id ? (
+            {busy === m.id && !saving ? (
               <Loader2 className="animate-spin" size={16} />
             ) : (
               <Check size={16} />
             )}
             Aprovar e enviar
           </button>
+          </div>
         </article>
       ))}
       {!messages.length && <Empty />}
