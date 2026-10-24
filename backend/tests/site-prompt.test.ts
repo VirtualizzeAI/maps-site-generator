@@ -51,6 +51,16 @@ describe("integração do prompt com a geração", () => {
   const originalMode = config.mode;
   afterEach(() => { config.mode=originalMode; vi.unstubAllGlobals(); });
 
+  it("registra tokens pagos antes de recusar HTML inválido", async () => {
+    config.mode="real";
+    const fetcher=vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({model:"gpt-6-sol",usage:{input_tokens:1000,output_tokens:500},output_text:"HTML inválido"})));
+    vi.stubGlobal("fetch",fetcher);
+    const recorded=vi.fn(async()=>{});
+    await expect(createSite(company,{openai_api_key:"fixture",openai_model:"gpt-6-sol"} as IntegrationSettings,recorded)).rejects.toThrow("HTML válido");
+    expect(recorded).toHaveBeenCalledWith(expect.objectContaining({total_tokens:1500,estimated_cost_usd:0.007}));
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it("usa o prompt salvo nas instruções da chamada OpenAI", async () => {
     config.mode="real";
     const settings: IntegrationSettings = {
@@ -67,12 +77,15 @@ describe("integração do prompt com a geração", () => {
       throw new Error("Requisição inesperada no teste");
     });
     vi.stubGlobal("fetch",fetcher);
-    const result=await createSite(company,settings);
+    const recorded=vi.fn(async()=>{});
+    const result=await createSite(company,settings,recorded);
     try {
       const request=JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body));
       expect(request.instructions).toContain("site de luxo para Empresa Teste com fundo bege");
       expect(request.input).toContain(company.phone);
       expect(request.model).toBe("fixture-model");
+      expect(recorded).toHaveBeenCalledWith(expect.objectContaining({model:"fixture-model",total_tokens:null,estimated_cost_usd:null}));
+      expect(recorded.mock.invocationCallOrder[0]).toBeLessThan(fetcher.mock.invocationCallOrder[1]!);
     } finally { await rm(path.join(sitesDir,result.slug),{recursive:true,force:true}); }
   });
 });

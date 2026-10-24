@@ -1,6 +1,13 @@
 # Estado atual do Maps Site Generator
 
-Última revisão: 23 de outubro de 2026.
+Última revisão: 24 de outubro de 2026.
+
+## Tokens e custo da geração de sites
+
+- Cada nova geração registra o modelo efetivo e os tokens retornados pela OpenAI (entrada, leitura/gravação de cache, saída, raciocínio e total), com estimativa em USD e tarifas congeladas. Contagem de raciocínio/cache não é duplicada no custo. Modo mock registra simulação com zero consumo/custo.
+- Consumo é salvo e auditado antes de validar HTML/publicar/enviar; falhas posteriores preservam o gasto. Detalhe da operação e histórico da empresa exibem valores por site; operação mostra total próprio e visão geral exibe acumulado da organização, incluindo arquivados e falhas com consumo registrado.
+- Histórico anterior permanece sem registro. Uso ausente, modelos sem tarifa conhecida ou service tiers não suportados sinalizam totais parciais; não há custo inventado. Estimativa somente OpenAI, não equivale à fatura e não inclui outros provedores, impostos, descontos ou câmbio. Tarifas Standard verificadas em 24/10/2026; revisão para futuras mudanças no provedor é manual, sem recalcular histórico.
+- Migration `202610240001_site_generation_usage.sql` aplicada antes do backend. Validação: 57 testes e build do backend; lint/build do frontend; navegador desktop/mobile para acumulado, precisão USD, site, histórico e perfil visualizador; API em organizações temporárias verificou gravação pelo store/recarga JSONB, tarifas, totais, falhas/arquivados, histórico, autenticação e isolamento. Fixtures removidas. Nenhuma geração paga ou mensagem real foi disparada.
 
 ## Intervalo entre envios totalmente automáticos
 

@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import { summarizeSiteUsage } from "./site-usage.js";
 import cors from "@fastify/cors";
 import staticFiles from "@fastify/static";
 import { z } from "zod";
@@ -203,6 +204,7 @@ app.get("/api/v1/operations/:id", async (request) => {
   const integration = integrationOf(db.integrations, operation.organization_id);
   return {
     ...operation,
+    generation_totals: summarizeSiteUsage(db.operationCompanies.filter(item => item.operation_id === operationId)),
     delivery: {
       test_mode: integration.whatsapp_test_mode,
       test_number: integration.whatsapp_test_mode
@@ -233,6 +235,7 @@ app.get("/api/v1/operations/:id", async (request) => {
           discard_reason: link.discard_reason,
           score: link.score,
           generated_site_url: link.generated_site_url,
+          site_generation_usage: link.site_generation_usage ?? null,
           final_message: link.final_message,
           updated_at: link.updated_at,
         };
@@ -308,6 +311,7 @@ app.get("/api/v1/companies", async (request) => {
                   status: link.status,
                   listed_at: link.created_at,
                   generated_site_url: link.generated_site_url,
+                  site_generation_usage: link.site_generation_usage ?? null,
                 }
               : null;
           })
@@ -365,6 +369,7 @@ app.get("/api/v1/dashboard/summary", async (request) => {
       (item) => item.organization_id === organizationId && !item.archived_at,
     ).length,
     operations: operations.length,
+    generation_totals: summarizeSiteUsage(db.operationCompanies.filter(item => item.organization_id === organizationId)),
     sites_generated: links.filter((item) => item.generated_site_url).length,
     messages_sent: messages.filter((item) => item.status === "sent").length,
     discarded: links.filter((item) => item.status.startsWith("discarded_"))

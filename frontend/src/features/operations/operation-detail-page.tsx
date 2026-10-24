@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SiteUsage, GenerationCostSummary } from "@/components/site-generation-usage";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -276,6 +277,7 @@ export function OperationDetailPage({ operationId }: { operationId: string }) {
                 </div>
               )}
               <LivePanel operation={operation} />
+              <GenerationCostSummary totals={operation.generation_totals} />
               <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
                 <Metric
                   title="Lista de empresas"
@@ -541,6 +543,7 @@ function CompanyCard({ company }: { company: OperationCompany }) {
         )}
         <p>Listada em {new Date(company.listed_at).toLocaleString("pt-BR")}</p>
       </div>
+      {(company.site_generation_usage || company.generated_site_url) && <SiteUsage usage={company.site_generation_usage} />}
       {company.discard_reason && (
         <p className="mt-3 rounded-lg bg-slate-50 p-2 text-xs text-slate-600">
           {company.discard_reason}

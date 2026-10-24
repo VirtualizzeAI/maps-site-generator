@@ -343,7 +343,14 @@ async function processCandidate(
       link.status = "generating";
       link.updated_at = now();
     });
-    const site = await createSite(candidate, integration),
+    const site = await createSite(candidate, integration, async usage => {
+      await store.mutate(db => {
+        const link = db.operationCompanies.find(item => item.id === prepared.linkId)!;
+        link.site_generation_usage = usage;
+        link.updated_at = now();
+        db.events.push(event(link.organization_id, operationId, "site_generation_usage_recorded", {model: usage.model, total_tokens: usage.total_tokens, estimated_cost_usd: usage.estimated_cost_usd}, link.id));
+      });
+    }),
       currentOperation = store
         .snapshot()
         .operations.find((item) => item.id === operationId)!;
