@@ -6,6 +6,7 @@ import { createSite } from "./integrations/site.js";
 import { sendWhatsApp } from "./integrations/whatsapp.js";
 import { identities, normalizeText } from "./normalization.js";
 import { store } from "./store.js";
+import { waitForAutomaticSendInterval } from "./automatic-send-interval.js";
 import type {
   Company,
   IntegrationSettings,
@@ -351,6 +352,20 @@ async function processCandidate(
       prepared.company,
       site.url,
     );
+    if (currentOperation.approval_mode === "automatic") {
+      await waitForAutomaticSendInterval(() => {
+        const history = store.snapshot();
+        const settings = history.integrations.find(item => item.organization_id === currentOperation.organization_id);
+        return {history, organizationId: currentOperation.organization_id, seconds: settings?.automatic_send_interval_seconds ?? 0};
+      }, async remainingMs => {
+        await store.mutate(db => {
+          const op = db.operations.find(item => item.id === operationId)!;
+          op.current_stage = "Aguardando intervalo entre envios automáticos";
+          op.updated_at = now();
+          db.events.push(event(op.organization_id, operationId, "automatic_send_wait", {remaining_ms: remainingMs}, prepared.linkId));
+        });
+      });
+    }
     await store.mutate(async (db) => {
       const op = db.operations.find((item) => item.id === operationId)!,
         link = db.operationCompanies.find(

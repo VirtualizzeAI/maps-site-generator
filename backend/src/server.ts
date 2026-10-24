@@ -548,11 +548,8 @@ app.put("/api/v1/integrations", async (request) => {
   await store.mutate((db) => {
     const integration = integrationOf(db.integrations, organizationId);
     for (const [key, value] of Object.entries(payload)) {
-      if (typeof value === "boolean")
-        (integration as unknown as Record<string, unknown>)[key] = value;
-      else
-        (integration as unknown as Record<string, string>)[key] =
-          value?.trim() || "";
+      (integration as unknown as Record<string, unknown>)[key] =
+        typeof value === "string" ? value.trim() : value;
     }
     try { validateTestRecipient(integration); }
     catch { throw new ApiError(422, "Informe um número válido para ativar o modo de teste"); }
@@ -707,6 +704,7 @@ function integrationView(item: IntegrationSettings) {
     openai_configured: !!item.openai_api_key,
     openai_model: item.openai_model,
     site_generation_prompt: item.site_generation_prompt || DEFAULT_SITE_GENERATION_PROMPT,
+    automatic_send_interval_seconds: item.automatic_send_interval_seconds ?? 0,
     default_site_generation_prompt: DEFAULT_SITE_GENERATION_PROMPT,
     vercel_configured: !!item.vercel_token,
     evolution_configured: !!(

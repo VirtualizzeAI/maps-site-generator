@@ -35,6 +35,7 @@ export interface IntegrationSettings {
   openai_api_key: string;
   openai_model: string;
   site_generation_prompt: string;
+  automatic_send_interval_seconds: number;
   vercel_token: string;
   evolution_url: string;
   evolution_api_key: string;

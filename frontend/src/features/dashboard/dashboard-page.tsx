@@ -93,6 +93,7 @@ type Integration = {
   openai_configured: boolean;
   openai_model: string;
   site_generation_prompt: string;
+  automatic_send_interval_seconds: number;
   default_site_generation_prompt: string;
   vercel_configured: boolean;
   evolution_configured: boolean;
@@ -1207,6 +1208,7 @@ function Integrations({
     [form, setForm] = useState({
       openai_model: integration?.openai_model || "gpt-5.6-luna",
       site_generation_prompt: integration?.site_generation_prompt || integration?.default_site_generation_prompt || "",
+      automatic_send_interval_seconds: integration?.automatic_send_interval_seconds ?? 0,
       evolution_url: integration?.evolution_url || "",
       evolution_instance: integration?.evolution_instance || "",
       whatsapp_test_mode: integration?.whatsapp_test_mode || false,
@@ -1226,7 +1228,7 @@ function Integrations({
       );
       await refresh();
       setSuccess("Configurações salvas.");
-      notify({ variant: "success", title: "Configurações salvas", description: "Suas alterações foram salvas. O prompt será usado nas próximas operações." });
+      notify({ variant: "success", title: "Configurações salvas", description: "Suas alterações foram salvas." });
     } catch (error) {
       setError(error instanceof Error ? error.message : "Não foi possível salvar as configurações");
       notify({ variant: "error", title: "Não foi possível salvar as configurações", description: error instanceof Error ? error.message : "Verifique os campos e tente novamente." });
@@ -1344,6 +1346,19 @@ function Integrations({
         </label>
       </div>
       <p className="mt-4 text-sm text-slate-500">A chave fica em EVOLUTION_API_KEY no servidor. Use a chave da instância ou, com a chave administrativa, informe acima o nome exato da instância. O indicador confirma a configuração, não o estado da conexão.</p>
+      <section aria-labelledby="automatic-interval-title" className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+        <h3 id="automatic-interval-title" className="font-semibold text-slate-900">Intervalo entre envios automáticos</h3>
+        <p className="mt-2 text-sm text-slate-600">Defina o tempo mínimo entre as mensagens no modo totalmente automático. A geração do próximo site já conta nesse tempo.</p>
+        <label className="mt-4 block max-w-xs text-sm font-medium text-slate-700">
+          Intervalo em segundos
+          <input type="number" min={0} max={3600} step={1} required
+            value={form.automatic_send_interval_seconds}
+            onChange={event => setForm({...form, automatic_send_interval_seconds: Number(event.target.value)})}
+            aria-describedby="automatic-interval-help"
+            className="mt-2 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:border-blue-500" />
+        </label>
+        <p id="automatic-interval-help" className="mt-3 text-sm text-slate-600">De 0 a 3.600 segundos (1 hora). Use 0 para desativar a espera. O intervalo é aplicado por organização, inclusive entre operações. Alterações valem para os próximos envios automáticos; mensagens com aprovação humana continuam sendo enviadas manualmente.</p>
+      </section>
       <section aria-labelledby="site-prompt-title" className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
         <h3 id="site-prompt-title" className="font-semibold text-slate-900">Prompt do agente de sites</h3>
         <p className="mt-2 text-sm text-slate-600">Defina o estilo, as seções, o tom dos textos e as orientações visuais dos sites. As alterações valem para as próximas operações; os sites já publicados não serão alterados.</p>

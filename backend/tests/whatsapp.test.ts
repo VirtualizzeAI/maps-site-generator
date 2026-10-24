@@ -4,7 +4,7 @@ import { config } from "../src/config.js";
 import type { IntegrationSettings } from "../src/types.js";
 
 const integration=(overrides:Partial<IntegrationSettings>={}):IntegrationSettings=>({
-  organization_id:"org-1",serper_api_key:"",openai_api_key:"",openai_model:"gpt-5-mini",site_generation_prompt:"",vercel_token:"",
+  organization_id:"org-1",serper_api_key:"",openai_api_key:"",openai_model:"gpt-5-mini",site_generation_prompt:"",automatic_send_interval_seconds:0,vercel_token:"",
   evolution_url:"",evolution_api_key:"",evolution_instance:"",whatsapp_test_mode:false,whatsapp_test_number:"",updated_at:new Date().toISOString(),...overrides,
 });
 

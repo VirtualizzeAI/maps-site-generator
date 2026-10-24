@@ -58,3 +58,9 @@ A migration `202610230001_site_generation_prompt.sql` adiciona a coluna à tabel
 Administradores e operadores podem editar mensagens com status `pending_approval` em **Aprovações → Editar mensagem**. Salvar atualiza o texto da mensagem e o histórico da empresa, gera auditoria e mantém a aprovação pendente, sem chamar o WhatsApp. A aprovação posterior usa o texto salvo.
 
 O endpoint `PATCH /api/v1/messages/:id` aceita `content` (1 a 4.000 caracteres, preservando parágrafos) e `expected_updated_at`, a versão recebida na listagem. Versões antigas retornam 409, assim como alterações durante envio ou em mensagens já enviadas. Registros arquivados não podem ser editados; destinatário e status não são alteráveis pelo endpoint. O mesmo bloqueio por mensagem protege edição e aprovação na instância única do backend. Não há migration adicional.
+
+## Intervalo entre envios automáticos
+
+Em **Configurações → Intervalo entre envios automáticos**, administradores definem de 0 a 3.600 segundos por organização. Zero mantém o envio assim que o próximo site estiver pronto. O intervalo é contado desde o último envio automático bem-sucedido, inclusive em outra operação; tempo de análise e geração já decorrido conta nesse período. Sem histórico, o primeiro envio não recebe espera adicional. Não há espera após o último envio nem no fluxo de aprovação humana.
+
+Durante a espera, o andamento mostra a etapa correspondente. O worker aguarda fora da fila de mutações e reavalia a configuração a cada segundo, permitindo ajustar/desativar o intervalo enquanto a operação aguarda. A configuração usa `automatic_send_interval_seconds` no endpoint de integrações, com auditoria. Aplicar a migration `202610230002_automatic_send_interval.sql` antes desta versão; o padrão 0 preserva o comportamento anterior.
