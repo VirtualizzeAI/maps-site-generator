@@ -14,6 +14,7 @@ import { config, sitesDir } from "./config.js";
 import { createUserSchema, integrationPatchSchema, validateTestRecipient } from "./admin-schemas.js";
 import { checkDatabase } from "./database.js";
 import { DEFAULT_SITE_GENERATION_PROMPT } from "./site-prompt.js";
+import { approveMessageSchema, editPendingMessageSchema } from "./message-schemas.js";
 import { sendWhatsApp, WhatsAppDeliveryError } from "./integrations/whatsapp.js";
 import { startWorker } from "./pipeline.js";
 import { store } from "./store.js";
@@ -404,13 +405,50 @@ app.get("/api/v1/messages", async (request) => {
     .map((record) => serializeMessage(record, db));
 });
 
-const approvalsInFlight = new Set<string>();
+const messageActionsInFlight = new Set<string>();
+app.patch("/api/v1/messages/:id", async (request) => {
+  const user = await currentUser(request),
+    messageId = (request.params as { id: string }).id,
+    payload = editPendingMessageSchema.parse(request.body),
+    snapshot = store.snapshot(),
+    record = snapshot.messages.find(item => item.id === messageId);
+  if (!record) throw new ApiError(404, "Mensagem não encontrada");
+  membership(user.id, record.organization_id, ["admin", "operator"]);
+  if (messageActionsInFlight.has(messageId))
+    throw new ApiError(409, "Esta mensagem está sendo salva ou enviada. Aguarde a conclusão.");
+  messageActionsInFlight.add(messageId);
+  try {
+    await store.mutate(db => {
+      const target = db.messages.find(item => item.id === messageId),
+        link = target && db.operationCompanies.find(item => item.id === target.operation_company_id),
+        operation = link && db.operations.find(item => item.id === link.operation_id),
+        company = link && db.companies.find(item => item.id === link.company_id);
+      if (!target || !link || !operation || !company || operation.archived_at || company.archived_at)
+        throw new ApiError(404, "Mensagem não encontrada");
+      if (target.status !== "pending_approval")
+        throw new ApiError(409, "Somente mensagens aguardando aprovação podem ser editadas");
+      if (target.updated_at !== payload.expected_updated_at)
+        throw new ApiError(409, "A mensagem foi alterada. Cancele a edição e abra novamente para carregar o texto atual.");
+      const timestamp = now();
+      target.content = payload.content;
+      target.updated_at = timestamp;
+      link.final_message = payload.content;
+      link.updated_at = timestamp;
+      db.events.push({id: id(), organization_id: target.organization_id, operation_id: operation.id,
+        operation_company_id: link.id, actor_id: user.id, event_type: "message_edited",
+        payload: {message_id: target.id}, created_at: timestamp});
+    });
+    const db = store.snapshot();
+    return serializeMessage(db.messages.find(item => item.id === messageId)!, db);
+  } finally {
+    messageActionsInFlight.delete(messageId);
+  }
+});
+
 app.post("/api/v1/messages/:id/approve", async (request) => {
   const user = await currentUser(request),
     messageId = (request.params as { id: string }).id,
-    payload = z
-      .object({ content: z.string().min(1).optional() })
-      .parse(request.body || {}),
+    payload = approveMessageSchema.parse(request.body || {}),
     snapshot = store.snapshot(),
     record = snapshot.messages.find((item) => item.id === messageId),
     link =
@@ -425,9 +463,9 @@ app.post("/api/v1/messages/:id/approve", async (request) => {
   membership(user.id, operation.organization_id, ["admin", "operator"]);
   if (record.status !== "pending_approval")
     throw new ApiError(409, "A mensagem não está aguardando aprovação");
-  if (approvalsInFlight.has(messageId))
-    throw new ApiError(409, "Esta mensagem já está sendo aprovada");
-  approvalsInFlight.add(messageId);
+  if (messageActionsInFlight.has(messageId))
+    throw new ApiError(409, "Esta mensagem está sendo salva ou enviada. Aguarde a conclusão.");
+  messageActionsInFlight.add(messageId);
   try {
   const integration = integrationOf(
       snapshot.integrations,
@@ -489,7 +527,7 @@ app.post("/api/v1/messages/:id/approve", async (request) => {
     store.snapshot(),
   );
   } finally {
-    approvalsInFlight.delete(messageId);
+    messageActionsInFlight.delete(messageId);
   }
 });
 
@@ -703,6 +741,7 @@ function serializeMessage(record: Message, db: Database) {
     status: record.status,
     site_url: link.generated_site_url,
     created_at: record.created_at,
+    updated_at: record.updated_at,
   };
 }
 

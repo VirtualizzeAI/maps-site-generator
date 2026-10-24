@@ -2,6 +2,14 @@
 
 Última revisão: 23 de outubro de 2026.
 
+## Edição das mensagens pendentes de aprovação
+
+- Aprovações inclui editor por mensagem com salvamento, cancelamento, contador de caracteres e preservação de parágrafos. Salvar não envia; a aprovação usa o texto já salvo. O rascunho é preservado durante polling e falhas de gravação.
+- Administradores e operadores podem editar; visualizadores não podem editar/aprovar. Backend valida organização, estado pendente, versão e limite de 4.000 caracteres, sincroniza o histórico e gera auditoria. Edição/aprovação compartilham bloqueio por mensagem para evitar alteração durante envio.
+- Conflitos mostram orientação para recarregar o texto; uma mensagem removida da fila por outro operador não bloqueia as demais ações. Não há alteração de schema do banco.
+- Validação: 40 testes e build do backend, lint/build do frontend; fluxo de API em organizações temporárias validou persistência, permissões, estados, conflitos, auditoria e aprovação do texto editado contra provedor simulado. Fixtures removidas e nenhum envio WhatsApp real realizado.
+- Navegador validou cancelamento, preservação do rascunho em polling/erro, salvamento separado, conflitos, aprovação, remoção concorrente da fila, visualização sem permissão de edição e layout mobile.
+
 ## Confirmações visuais das ações
 
 - Modal global de sucesso/erro nas ações de login, criação de usuários, salvamento das configurações/prompt, criação/agendamento de operações, aprovação de mensagens e arquivamento de empresas/operações, incluindo o detalhe da operação.
