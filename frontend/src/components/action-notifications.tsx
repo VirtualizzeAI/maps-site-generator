@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { AlertDialog } from "radix-ui";
+import { createContext, useCallback, useContext, useRef, useState } from "react";
+import { Toast } from "radix-ui";
 import { CircleCheck, CircleX, X } from "lucide-react";
 
 type Notification = {
@@ -9,66 +9,46 @@ type Notification = {
   title: string;
   description: string;
 };
-type PendingNotification = Notification & { returnFocus: HTMLElement | null };
+type PendingNotification = Notification & { id: number };
 const NotificationContext = createContext<((notification: Notification) => void) | null>(null);
 
 export function ActionNotifications({ children }: { children: React.ReactNode }) {
-  const [queue, setQueue] = useState<PendingNotification[]>([]);
-  const actionRef = useRef<HTMLButtonElement>(null);
-  const returnFocusRef = useRef<HTMLElement | null>(null);
-  const lastFocusedRef = useRef<HTMLElement | null>(null);
-  useEffect(() => {
-    function rememberFocus(event: FocusEvent) {
-      if (event.target instanceof HTMLElement && event.target !== document.body && !event.target.closest('[role="alertdialog"]')) {
-        lastFocusedRef.current = event.target;
-      }
-    }
-    document.addEventListener("focusin", rememberFocus);
-    return () => document.removeEventListener("focusin", rememberFocus);
-  }, []);
+  // Cada nova leva reinicia a pausa dos timers, inclusive após fechar a última notificação.
+  // O provider envolve só os toasts para preservar o estado da página.
+  const [batch, setBatch] = useState<{id: number; items: PendingNotification[]}>({id: 0, items: []});
+  const notifications = batch.items;
+  const nextId = useRef(0);
   const notify = useCallback((notification: Notification) => {
-    const returnFocus = document.activeElement instanceof HTMLElement && document.activeElement !== document.body
-      ? document.activeElement : lastFocusedRef.current;
-    setQueue(current => [...current, { ...notification, returnFocus }]);
+    const id = ++nextId.current;
+    setBatch(current => ({id: current.items.length ? current.id : current.id + 1, items: [...current.items, { ...notification, id }]}));
   }, []);
-  const notification = queue[0];
-  const success = notification?.variant === "success";
-  const Icon = success ? CircleCheck : CircleX;
-  function close() {
-    returnFocusRef.current = notification?.returnFocus || null;
-    setQueue(current => current.slice(1));
-  }
 
   return (
     <NotificationContext.Provider value={notify}>
       {children}
-      <AlertDialog.Root open={!!notification} onOpenChange={open => { if (!open) close(); }}>
-        <AlertDialog.Portal>
-          <AlertDialog.Overlay className="fixed inset-0 z-[100] bg-slate-950/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
-          <AlertDialog.Content
-            onOpenAutoFocus={event => { event.preventDefault(); actionRef.current?.focus(); }}
-            onCloseAutoFocus={event => { event.preventDefault(); if (returnFocusRef.current?.isConnected) returnFocusRef.current.focus(); }}
-            className="fixed left-1/2 top-1/2 z-[101] max-h-[85dvh] w-[calc(100%_-_2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:p-8"
-          >
-            <AlertDialog.Cancel asChild>
-              <button type="button" aria-label="Fechar notificação" className="absolute right-4 top-4 rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-blue-500">
-                <X size={18} aria-hidden="true" />
-              </button>
-            </AlertDialog.Cancel>
-            <div className={`mb-5 grid h-16 w-16 place-items-center rounded-2xl ${success ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"}`}>
-              <Icon size={34} aria-hidden="true" />
-            </div>
-            <p className={`mb-2 text-xs font-bold uppercase tracking-wider ${success ? "text-emerald-700" : "text-red-700"}`}>{success ? "Tudo certo" : "A ação não foi concluída"}</p>
-            <AlertDialog.Title className="pr-3 text-xl font-bold text-slate-900">{notification?.title}</AlertDialog.Title>
-            <AlertDialog.Description className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600">{notification?.description}</AlertDialog.Description>
-            <AlertDialog.Action asChild>
-              <button ref={actionRef} type="button" className={`mt-7 w-full rounded-xl px-4 py-3 text-sm font-semibold text-white outline-none focus-visible:ring-4 focus-visible:ring-offset-2 ${success ? "bg-emerald-600 hover:bg-emerald-700 focus-visible:ring-emerald-200" : "bg-red-600 hover:bg-red-700 focus-visible:ring-red-200"}`}>
-                Entendi
-              </button>
-            </AlertDialog.Action>
-          </AlertDialog.Content>
-        </AlertDialog.Portal>
-      </AlertDialog.Root>
+      <Toast.Provider key={batch.id} swipeDirection="right" duration={5000} label="Notificação">
+        {notifications.map(notification => {
+          const success = notification.variant === "success";
+          const Icon = success ? CircleCheck : CircleX;
+          return (
+            <Toast.Root key={notification.id} defaultOpen
+              type={success ? "background" : "foreground"}
+              duration={success ? 5000 : 8000}
+              onOpenChange={open => { if (!open) setBatch(current => ({...current, items: current.items.filter(item => item.id !== notification.id)})); }}
+              className={`pointer-events-auto flex items-start gap-3 rounded-xl border bg-white p-3 shadow-lg outline-none data-[state=open]:animate-in data-[state=open]:slide-in-from-right-4 data-[swipe=end]:opacity-0 ${success ? "border-emerald-200" : "border-red-200"}`}>
+              <Icon size={20} aria-hidden="true" className={`mt-0.5 shrink-0 ${success ? "text-emerald-600" : "text-red-600"}`} />
+              <div className="min-w-0 flex-1">
+                <Toast.Title className="text-sm font-semibold text-slate-900">{notification.title}</Toast.Title>
+                <Toast.Description className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 text-slate-600">{notification.description}</Toast.Description>
+              </div>
+              <Toast.Close aria-label="Fechar notificação" className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-blue-500">
+                <X size={16} aria-hidden="true" />
+              </Toast.Close>
+            </Toast.Root>
+          );
+        })}
+        <Toast.Viewport label="Notificações ({hotkey})" className="fixed right-4 top-4 z-[101] m-0 flex max-h-[calc(100dvh_-_2rem)] w-[360px] max-w-[calc(100vw_-_2rem)] list-none flex-col gap-2 overflow-y-auto outline-none" />
+      </Toast.Provider>
     </NotificationContext.Provider>
   );
 }

@@ -2,6 +2,13 @@
 
 Última revisão: 16 de novembro de 2026.
 
+## Notificações compactas e reinício autorizado da base
+
+- Resultados de ações usam notificações pequenas no canto superior direito, com ícone de sucesso/erro, texto e botão fechar. Não há overlay, bloqueio ou captura do foco. Sucessos fecham em 5 segundos, erros em 8; mouse/foco pausam o tempo e resultados simultâneos são empilhados. Mantém notificações durante navegação, anúncio acessível e layout mobile.
+- Por solicitação expressa do usuário em 16/11/2026, dados operacionais anteriores foram removidos permanentemente: 20 empresas, 74 identidades de deduplicação, 5 operações, 22 vínculos, 9 sites, 9 mensagens e 52 eventos. A limpeza é uma ação administrativa pontual autorizada, não muda o comportamento de arquivamento do produto. Custos históricos foram zerados junto com os dados. Arquivos locais de sites e 7 projetos gerados ainda existentes na Vercel foram removidos; projetos já ausentes não exigiram remoção. O painel Vercel foi preservado.
+- Uma organização, dois usuários, vínculos, credenciais e configurações foram preservados. Usuário confirmou desativar `whatsapp_test_mode`; próximos envios usam os destinatários das empresas. Nenhuma operação foi iniciada e nenhuma mensagem enviada durante a limpeza. Backup operacional/arquivos e inventário de remoção protegidos em `/opt/backups/maps-site-generator/reset-20261116`, fora do Git.
+- Banco verificado vazio para todas as tabelas operacionais, backend reiniciado para descartar o cache anterior e saúde confirmada. Validação do frontend: lint/build e navegador desktop/mobile para tamanho, ausência de modal/captura de foco, fechamento, múltiplas notificações, navegação, expiração e pausa. Requisições de interface simuladas, sem criar dados em produção.
+
 ## Cancelamento de mensagens pendentes
 
 - Aprovações inclui Cancelar envio para administradores/operadores, com confirmação, bloqueio durante edição/envio e modal de sucesso/erro. Item é removido localmente após sucesso, sem recarregar página; visualizadores não têm o botão.
