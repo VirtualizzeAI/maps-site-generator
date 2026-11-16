@@ -42,6 +42,7 @@ const statusLabels: Record<string, string> = {
   awaiting_approval: "Aguardando aprovação",
   sent: "Mensagem enviada",
   failed: "Falha",
+  cancelled: "Envio cancelado",
   discarded_no_phone: "Sem telefone",
   discarded_site_real: "Já possui site",
   discarded_digital_presence: "Presença digital suficiente",

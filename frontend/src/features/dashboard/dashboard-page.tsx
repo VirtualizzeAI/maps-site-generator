@@ -115,6 +115,7 @@ type TeamUser = {
 };
 
 const labels: Record<string, string> = {
+  cancelled: "Envio cancelado",
   queued: "Na fila",
   scheduled: "Agendada",
   searching: "Buscando",
@@ -351,7 +352,7 @@ export function DashboardPage() {
               messages={messages.filter((m) => m.status === "pending_approval")}
               token={token}
               refresh={() => refresh(user, token)}
-              onMessageSaved={updated => setMessages(current => current.map(item => item.id === updated.id ? updated : item))}
+              onMessageSaved={updated => setMessages(current => current.map(item => item.id === updated.id ? updated : item).filter(item => item.status === "pending_approval"))}
             />
           )}{" "}
           {view === "users" && (
@@ -947,6 +948,7 @@ function Reviews({
   const notify = useActionNotification();
   const [busy, setBusy] = useState(""), [error, setError] = useState(""),
     [saving, setSaving] = useState(false),
+    [cancelling, setCancelling] = useState(false),
     [editing, setEditing] = useState<{id: string; content: string; updated_at: string} | null>(null);
   const editingPending = !!editing && messages.some(message => message.id === editing.id);
   async function saveMessage() {
@@ -971,6 +973,23 @@ function Reviews({
       setBusy("");
       setSaving(false);
     }
+  }
+  async function cancelSend(message: Message) {
+    if (busy || editingPending || !canManage) return;
+    if (!window.confirm(`Cancelar o envio para ${message.company_name}? A mensagem sairá da fila de aprovação e não será enviada.`)) return;
+    setError("");
+    setBusy(message.id);
+    setCancelling(true);
+    try {
+      const updated = await apiRequest<Message>(`/api/v1/messages/${message.id}/cancel`, {method: "POST"}, token);
+      onMessageSaved(updated);
+      notify({variant: "success", title: "Envio cancelado", description: "A mensagem foi retirada da fila. O site e o histórico foram preservados."});
+      await refresh();
+    } catch (reason) {
+      const description = reason instanceof Error ? reason.message : "Tente novamente em alguns instantes.";
+      setError(description);
+      notify({variant: "error", title: "Não foi possível cancelar o envio", description});
+    } finally { setBusy(""); setCancelling(false); }
   }
   async function approve(id: string) {
     if (busy || editingPending || !canManage) return;
@@ -1053,13 +1072,18 @@ function Reviews({
             onClick={() => approve(m.id)}
             className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {busy === m.id && !saving ? (
+            {busy === m.id && !saving && !cancelling ? (
               <Loader2 className="animate-spin" size={16} />
             ) : (
               <Check size={16} />
             )}
             Aprovar e enviar
           </button>
+          {canManage && <button type="button" disabled={!!busy || editingPending}
+            onClick={() => cancelSend(m)}
+            className="flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">
+            {cancelling && busy === m.id ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />} Cancelar envio
+          </button>}
           </div>
         </article>
       ))}

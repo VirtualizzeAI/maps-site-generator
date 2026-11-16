@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import { cancelPendingMessage } from "./cancel-message.js";
 import { summarizeSiteUsage } from "./site-usage.js";
 import cors from "@fastify/cors";
 import staticFiles from "@fastify/static";
@@ -372,7 +373,7 @@ app.get("/api/v1/dashboard/summary", async (request) => {
     generation_totals: summarizeSiteUsage(db.operationCompanies.filter(item => item.organization_id === organizationId)),
     sites_generated: links.filter((item) => item.generated_site_url).length,
     messages_sent: messages.filter((item) => item.status === "sent").length,
-    discarded: links.filter((item) => item.status.startsWith("discarded_"))
+    discarded: links.filter((item) => item.status.startsWith("discarded_") || item.status === "cancelled")
       .length,
     blocked: links.filter((item) => item.status === "blocked_history").length,
     pending_approval: messages.filter(
@@ -411,6 +412,23 @@ app.get("/api/v1/messages", async (request) => {
 });
 
 const messageActionsInFlight = new Set<string>();
+app.post("/api/v1/messages/:id/cancel", async (request) => {
+  const user = await currentUser(request),
+    messageId = (request.params as { id: string }).id,
+    record = store.snapshot().messages.find(item => item.id === messageId);
+  if (!record) throw new ApiError(404, "Mensagem não encontrada");
+  membership(user.id, record.organization_id, ["admin", "operator"]);
+  if (messageActionsInFlight.has(messageId))
+    throw new ApiError(409, "Esta mensagem está sendo salva ou enviada. Aguarde a conclusão.");
+  messageActionsInFlight.add(messageId);
+  try {
+    await store.mutate(db => cancelPendingMessage(db, messageId, user.id, id(), now()));
+    const db = store.snapshot();
+    return serializeMessage(db.messages.find(item => item.id === messageId)!, db);
+  } finally {
+    messageActionsInFlight.delete(messageId);
+  }
+});
 app.patch("/api/v1/messages/:id", async (request) => {
   const user = await currentUser(request),
     messageId = (request.params as { id: string }).id,
