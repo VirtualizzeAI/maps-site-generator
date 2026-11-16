@@ -1,6 +1,13 @@
 # Estado atual do Maps Site Generator
 
-Última revisão: 24 de outubro de 2026.
+Última revisão: 16 de novembro de 2026.
+
+## Cancelamento de mensagens pendentes
+
+- Aprovações inclui Cancelar envio para administradores/operadores, com confirmação, bloqueio durante edição/envio e modal de sucesso/erro. Item é removido localmente após sucesso, sem recarregar página; visualizadores não têm o botão.
+- Backend valida organização, perfil, registros ativos e estado pendente; compartilha bloqueio com edição/aprovação. Mensagem e vínculo recebem `cancelled`, contador de descartadas é atualizado e auditoria registra o autor. Conteúdo, site, custos e identidade histórica são preservados; não chama WhatsApp e recusa aprovação posterior.
+- Última pendência conclui operação aguardando aprovação; operação ainda processando não é encerrada. Migration `202611160001_cancel_pending_messages.sql` amplia os estados permitidos de mensagens e foi aplicada antes do backend.
+- Validação: 62 testes e build do backend, lint/build do frontend; API em organizações temporárias validou persistência, permissões/isolamento, saída da fila, rejeição de enviados/repetição/aprovação posterior, concorrência, auditoria e conclusão da última pendência. Navegador validou confirmação/desistência, erro/nova tentativa, sucesso, edição, visualizador e mobile. Fixtures removidas; nenhum envio real foi realizado.
 
 ## Tokens e custo da geração de sites
 
