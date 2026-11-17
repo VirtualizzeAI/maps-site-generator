@@ -1,5 +1,6 @@
 import { config } from "./config.js";
 import { id, now } from "./auth.js";
+import { analyzeAdvanced } from "./integrations/advanced-analyzer.js";
 import { analyzePresence } from "./integrations/analyzer.js";
 import { searchCompanies } from "./integrations/search.js";
 import { createSite } from "./integrations/site.js";
@@ -125,7 +126,7 @@ export async function processOperation(operationId: string) {
         const target = db.operations.find((item) => item.id === operationId)!;
         target.current_company_id = prepared.company.id;
         target.current_company_name = prepared.company.name;
-        target.current_stage = "Verificando presença digital";
+        target.current_stage = target.analysis_mode === "advanced" ? "Pesquisando empresa na internet" : "Verificando presença digital";
         target.updated_at = now();
       });
       await processCandidate(operationId, prepared, integration);
@@ -288,7 +289,20 @@ async function processCandidate(
 ) {
   const candidate = prepared.candidate;
   try {
-    const analysis = await analyzePresence(candidate);
+    const operation = store.snapshot().operations.find(item => item.id === operationId)!;
+    const report = operation.analysis_mode === "advanced" && candidate.phone
+      ? await analyzeAdvanced(candidate, integration, operation.analysis_model || "gpt-6.1-sol", async usage => {
+          await store.mutate(db => {
+            const link = db.operationCompanies.find(item => item.id === prepared.linkId)!;
+            link.advanced_analysis = {model: operation.analysis_model || "gpt-6.1-sol", decision:"analysis_inconclusive", reason:"Pesquisa recebida, validando evidências.", confidence:0, sources:[], websites:[], usage, checked_at:now()};
+          });
+        }) : null;
+    if (report) await store.mutate(db => {
+      const link = db.operationCompanies.find(item => item.id === prepared.linkId)!;
+      link.advanced_analysis = report;
+      db.events.push(event(operation.organization_id, operationId, "advanced_analysis_completed", {model:report.model,decision:report.decision,estimated_cost_usd:report.usage?.estimated_cost_usd ?? null}, link.id));
+    });
+    const analysis = report ? {score: report.confidence, decision: report.decision, evidence:{reason:report.reason}, discovered:{emails:[],phones:[],socialLinks:[]}} : await analyzePresence(candidate);
     await store.mutate((db) => {
       const company = db.companies.find(
         (item) => item.id === prepared.company.id,
@@ -312,7 +326,7 @@ async function processCandidate(
             (item) => item.id === prepared.linkId,
           )!;
         op.analyzed_count++;
-        op.discarded_count++;
+        if (analysis.decision !== "analysis_inconclusive") op.discarded_count++;
         link.score = analysis.score;
         link.status = analysis.decision;
         link.discard_reason =

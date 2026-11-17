@@ -1,4 +1,6 @@
 import Fastify from "fastify";
+import { operationSchema } from "./operation-schema.js";
+import { summarizeAnalysis } from "./integrations/advanced-analyzer.js";
 import { cancelPendingMessage } from "./cancel-message.js";
 import { summarizeSiteUsage } from "./site-usage.js";
 import cors from "@fastify/cors";
@@ -130,15 +132,6 @@ app.get("/api/v1/auth/me", async (request) =>
   serializeUser(await currentUser(request)),
 );
 
-const operationSchema = z.object({
-  organization_id: z.string().uuid(),
-  niche: z.string().min(2).max(120),
-  city: z.string().min(2).max(160),
-  target_count: z.number().int().min(1).max(500),
-  approval_mode: z.enum(["automatic", "human_review"]),
-  message_template: z.string().min(1).max(4000),
-  scheduled_for: z.string().nullish(),
-});
 
 app.post("/api/v1/operations", async (request) => {
   const user = await currentUser(request),
@@ -152,6 +145,8 @@ app.post("/api/v1/operations", async (request) => {
     organization_id: payload.organization_id,
     created_by: user.id,
     niche: payload.niche,
+    analysis_mode: payload.analysis_mode,
+    analysis_model: payload.analysis_model,
     city: payload.city,
     target_count: payload.target_count,
     approval_mode: payload.approval_mode,
@@ -206,6 +201,7 @@ app.get("/api/v1/operations/:id", async (request) => {
   return {
     ...operation,
     generation_totals: summarizeSiteUsage(db.operationCompanies.filter(item => item.operation_id === operationId)),
+    analysis_totals: summarizeAnalysis(db.operationCompanies.filter(item => item.operation_id === operationId)),
     delivery: {
       test_mode: integration.whatsapp_test_mode,
       test_number: integration.whatsapp_test_mode
@@ -237,6 +233,7 @@ app.get("/api/v1/operations/:id", async (request) => {
           score: link.score,
           generated_site_url: link.generated_site_url,
           site_generation_usage: link.site_generation_usage ?? null,
+          advanced_analysis: link.advanced_analysis ?? null,
           final_message: link.final_message,
           updated_at: link.updated_at,
         };
@@ -313,6 +310,7 @@ app.get("/api/v1/companies", async (request) => {
                   listed_at: link.created_at,
                   generated_site_url: link.generated_site_url,
                   site_generation_usage: link.site_generation_usage ?? null,
+                  advanced_analysis: link.advanced_analysis ?? null,
                 }
               : null;
           })
@@ -371,6 +369,7 @@ app.get("/api/v1/dashboard/summary", async (request) => {
     ).length,
     operations: operations.length,
     generation_totals: summarizeSiteUsage(db.operationCompanies.filter(item => item.organization_id === organizationId)),
+    analysis_totals: summarizeAnalysis(db.operationCompanies.filter(item => item.organization_id === organizationId)),
     sites_generated: links.filter((item) => item.generated_site_url).length,
     messages_sent: messages.filter((item) => item.status === "sent").length,
     discarded: links.filter((item) => item.status.startsWith("discarded_") || item.status === "cancelled")

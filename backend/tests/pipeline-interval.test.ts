@@ -13,6 +13,7 @@ vi.mock("../src/store.js",()=>({store:{
 vi.mock("../src/auth.js",()=>({id:()=>`fixture-${++fixture.nextId}`,now:()=>new Date(Date.now()).toISOString()}));
 vi.mock("../src/integrations/search.js",()=>({searchCompanies:vi.fn()}));
 vi.mock("../src/integrations/analyzer.js",()=>({analyzePresence:vi.fn(async()=>({decision:"eligible",score:10,evidence:{},discovered:{emails:[],phones:[],socialLinks:[]}}))}));
+vi.mock("../src/integrations/advanced-analyzer.js",()=>({analyzeAdvanced:vi.fn()}));
 vi.mock("../src/integrations/site.js",()=>({createSite:vi.fn()}));
 vi.mock("../src/integrations/whatsapp.js",()=>({sendWhatsApp:vi.fn(async(recipient:string)=>{
   fixture.sendTimes.push(Date.now());return {providerMessageId:`mock-${fixture.sendTimes.length}`,originalRecipient:recipient,actualRecipient:recipient,redirected:false};
@@ -21,6 +22,7 @@ vi.mock("../src/integrations/whatsapp.js",()=>({sendWhatsApp:vi.fn(async(recipie
 import { processOperation } from "../src/pipeline.js";
 import { store } from "../src/store.js";
 import { searchCompanies } from "../src/integrations/search.js";
+import { analyzeAdvanced } from "../src/integrations/advanced-analyzer.js";
 import { createSite } from "../src/integrations/site.js";
 import { siteUsage } from "../src/site-usage.js";
 
@@ -37,6 +39,23 @@ beforeEach(()=>{
 afterEach(()=>vi.useRealTimers());
 
 describe("intervalo no processamento das operações",()=>{
+  it("modo avançado inconclusivo não gera nem envia e salva evidências",async()=>{
+    fixture.db.operations[0]!.analysis_mode="advanced";
+    vi.mocked(analyzeAdvanced).mockResolvedValue({model:"gpt-6.1-sol",decision:"analysis_inconclusive",reason:"Homônimas",confidence:50,sources:[],websites:[],usage:null,checked_at:new Date().toISOString()});
+    await processOperation("operation");
+    expect(createSite).not.toHaveBeenCalled();expect(fixture.sendTimes).toHaveLength(0);
+    expect(fixture.db.operationCompanies.every(c=>c.status==="analysis_inconclusive"&&c.advanced_analysis?.reason==="Homônimas")).toBe(true);
+  });
+  it("modo avançado elegível usa o modelo selecionado e prepara aprovação humana",async()=>{
+    fixture.db.operations[0]!.analysis_mode="advanced";fixture.db.operations[0]!.analysis_model="gpt-6-luna";fixture.db.operations[0]!.approval_mode="human_review";
+    vi.mocked(analyzeAdvanced).mockResolvedValue({model:"gpt-6-luna",decision:"eligible",reason:"Sem site",confidence:95,sources:[],websites:[],usage:null,checked_at:new Date().toISOString()});
+    await processOperation("operation");expect(vi.mocked(analyzeAdvanced).mock.calls[0]?.[2]).toBe("gpt-6-luna");expect(createSite).toHaveBeenCalledTimes(2);expect(fixture.db.messages.every(m=>m.status==="pending_approval")).toBe(true);expect(fixture.sendTimes).toHaveLength(0);
+  });
+  it("site próprio encontrado no avançado impede geração e envio",async()=>{
+    fixture.db.operations[0]!.analysis_mode="advanced";
+    vi.mocked(analyzeAdvanced).mockResolvedValue({model:"gpt-6.1-sol",decision:"discarded_site_real",reason:"Site próprio",confidence:95,sources:[],websites:[],usage:null,checked_at:new Date().toISOString()});
+    await processOperation("operation");expect(createSite).not.toHaveBeenCalled();expect(fixture.sendTimes).toHaveLength(0);expect(fixture.db.operations[0]!.discarded_count).toBe(2);
+  });
   it("preserva uso pago quando a publicação falha e não envia mensagens",async()=>{
     vi.mocked(createSite).mockImplementation(async (_candidate,_settings,onUsage)=>{
       await onUsage?.(siteUsage({usage:{input_tokens:1000,output_tokens:500}},"gpt-6-sol"));
@@ -55,6 +74,7 @@ describe("intervalo no processamento das operações",()=>{
     await vi.advanceTimersByTimeAsync(1999);expect(fixture.sendTimes).toHaveLength(1);
     await vi.advanceTimersByTimeAsync(1);await work;
     expect(fixture.sendTimes).toEqual([started,started+2000]);
+    expect(analyzeAdvanced).not.toHaveBeenCalled();
     expect(fixture.db.operations[0]?.status).toBe("completed");expect(vi.getTimerCount()).toBe(0);
   });
   it("contabiliza o tempo de criação do próximo site",async()=>{
