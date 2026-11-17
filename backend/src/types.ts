@@ -1,3 +1,4 @@
+import type { AdvancedAnalysis } from "./integrations/advanced-analyzer.js";
 import type { SiteGenerationUsage } from "./site-usage.js";
 export type Role = "admin" | "operator" | "viewer";
 export type ApprovalMode = "automatic" | "human_review";
@@ -46,6 +47,8 @@ export interface IntegrationSettings {
   updated_at: string;
 }
 export interface Operation {
+  analysis_mode?: "standard" | "advanced";
+  analysis_model?: "gpt-6-luna" | "gpt-6.1-sol" | "gpt-6-astra" | null;
   id: string;
   organization_id: string;
   created_by: string;
@@ -107,6 +110,7 @@ export interface OperationCompany {
   status: string;
   discard_reason: string | null;
   score: number | null;
+  advanced_analysis?: AdvancedAnalysis | null;
   generated_site_url: string | null;
   site_generation_usage?: SiteGenerationUsage | null;
   final_message: string | null;

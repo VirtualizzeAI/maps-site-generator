@@ -57,6 +57,8 @@ const tables: TableConfig[] = [
       "organization_id",
       "created_by",
       "niche",
+      "analysis_mode",
+      "analysis_model",
       "city",
       "target_count",
       "approval_mode",
@@ -125,6 +127,7 @@ const tables: TableConfig[] = [
       "score",
       "generated_site_url",
       "site_generation_usage",
+      "advanced_analysis",
       "final_message",
       "created_at",
       "updated_at",
@@ -383,7 +386,7 @@ async function upsert(
     (record, rowIndex) =>
       `(${config.columns
         .map((column, columnIndex) => {
-          values.push(record[column] === undefined ? null : record[column]);
+          values.push(column === "analysis_mode" ? record[column] ?? "standard" : record[column] === undefined ? null : record[column]);
           return `$${rowIndex * config.columns.length + columnIndex + 1}`;
         })
         .join(",")})`,

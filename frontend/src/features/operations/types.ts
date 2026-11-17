@@ -1,3 +1,4 @@
+import type { AnalysisModel, AdvancedReport, AnalysisTotals } from "@/components/advanced-analysis";
 import type { SiteGenerationUsage, GenerationTotals } from "@/components/site-generation-usage";
 export type ApprovalMode = "automatic" | "human_review";
 
@@ -15,6 +16,8 @@ export type OperationStatus =
   | "cancelled";
 
 export interface Operation {
+  analysis_mode?: "standard" | "advanced";
+  analysis_model?: AnalysisModel | null;
   id: string;
   organization_id: string;
   niche: string;
@@ -59,6 +62,7 @@ export interface OperationCompany {
   status: string;
   discard_reason: string | null;
   score: number | null;
+  advanced_analysis?: AdvancedReport | null;
   generated_site_url: string | null;
   site_generation_usage?: SiteGenerationUsage | null;
   final_message: string | null;
@@ -67,11 +71,14 @@ export interface OperationCompany {
 
 export interface OperationDetail extends Operation {
   generation_totals?: GenerationTotals;
+  analysis_totals?: AnalysisTotals;
   delivery: { test_mode: boolean; test_number: string | null };
   companies: OperationCompany[];
 }
 
 export interface CreateOperationInput {
+  analysis_mode?: "standard" | "advanced";
+  analysis_model?: AnalysisModel | null;
   organization_id: string;
   niche: string;
   city: string;

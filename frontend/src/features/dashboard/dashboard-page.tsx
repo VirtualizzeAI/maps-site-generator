@@ -1,5 +1,6 @@
 "use client";
 
+import { analysisModelOptions, AnalysisCostSummary, AdvancedAnalysisReport, type AnalysisModel, type AnalysisTotals, type AdvancedReport } from "@/components/advanced-analysis";
 import { SiteUsage, GenerationCostSummary, type SiteGenerationUsage, type GenerationTotals } from "@/components/site-generation-usage";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -43,6 +44,7 @@ type View =
   "overview" | "operations" | "companies" | "reviews" | "users" | "settings";
 type Summary = {
   generation_totals?: GenerationTotals;
+  analysis_totals?: AnalysisTotals;
   companies: number;
   operations: number;
   sites_generated: number;
@@ -58,6 +60,7 @@ type CompanyOperation = {
   city: string;
   status: string;
   listed_at: string;
+  advanced_analysis?: AdvancedReport | null;
   generated_site_url: string | null;
   site_generation_usage?: SiteGenerationUsage | null;
 };
@@ -116,6 +119,7 @@ type TeamUser = {
 
 const labels: Record<string, string> = {
   cancelled: "Envio cancelado",
+  analysis_inconclusive: "Análise inconclusiva",
   queued: "Na fila",
   scheduled: "Agendada",
   searching: "Buscando",
@@ -459,6 +463,7 @@ function Overview({
         />
       </div>
       <GenerationCostSummary totals={summary?.generation_totals} allTime />
+      <AnalysisCostSummary totals={summary?.analysis_totals} />
       {active && (
         <section className="mt-6 rounded-2xl bg-[#0b1b2d] p-6 text-white">
           <div className="flex items-center gap-3">
@@ -589,6 +594,7 @@ function OperationTable({
             >
               <td className="p-4">
                 <b>{o.niche}</b>
+                <p className="text-xs text-violet-700">{o.analysis_mode === "advanced" ? `Avançada · ${o.analysis_model}` : "Padrão"}</p>
                 <p className="text-xs text-slate-500">
                   {o.city} ·{" "}
                   {o.approval_mode === "automatic"
@@ -905,6 +911,7 @@ function Companies({
                           )}
                         </span>
                       </button>
+                      {operation.advanced_analysis && <div className="w-full"><AdvancedAnalysisReport report={operation.advanced_analysis} /></div>}
                       {(operation.site_generation_usage || operation.generated_site_url) && <div className="w-full"><SiteUsage usage={operation.site_generation_usage} /></div>}
                       {operation.generated_site_url && (
                         <a
@@ -1438,6 +1445,8 @@ function NewOperation({
 }) {
   const notify = useActionNotification();
   const [form, setForm] = useState({
+      analysis_mode: "standard" as "standard" | "advanced",
+      analysis_model: "gpt-6.1-sol" as AnalysisModel,
       niche: "Barbearias",
       city: "Mossoró",
       target_count: 10,
@@ -1489,6 +1498,20 @@ function NewOperation({
           </button>
         </div>
         <div className="mt-8 space-y-5">
+          <label className="block text-sm">Tipo de operação
+            <select value={form.analysis_mode} onChange={e=>setForm({...form,analysis_mode:e.target.value as "standard"|"advanced"})} className="mt-2 w-full rounded-xl border px-4 py-3">
+              <option value="standard">Padrão — análise atual</option><option value="advanced">Avançada — pesquisa na internet com IA</option>
+            </select>
+          </label>
+          {form.analysis_mode === "advanced" && <section className="space-y-3 rounded-xl border border-violet-200 bg-violet-50 p-4">
+            <label className="block text-sm font-semibold">Modelo da análise
+              <select value={form.analysis_model} onChange={e=>setForm({...form,analysis_model:e.target.value as AnalysisModel})} className="mt-2 w-full rounded-xl border bg-white px-3 py-3">
+                {analysisModelOptions.map(m=><option key={m.id} value={m.id}>{m.label}</option>)}
+              </select>
+            </label>
+            <p className="text-xs text-slate-600">{analysisModelOptions.find(m=>m.id===form.analysis_model)?.price}. Busca web: US$ 0,01 por chamada, além dos tokens. Preços Standard verificados em 17/11/2026; cache e consumo podem variar.</p>
+            <p className="text-xs text-slate-600">A IA pesquisa sites e confirma a identidade. Casos inconclusivos ficam para conferência, sem gerar site nem enviar mensagem. O modelo escolhido vale somente para esta análise; a geração do site usa o modelo das Configurações.</p>
+          </section>}
           <Field
             label="Nicho"
             value={form.niche}

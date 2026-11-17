@@ -59,3 +59,7 @@ O navegador usa o token de autenticação emitido pela API Fastify e chama o bac
 ## Confirmação de ações
 
 O layout inclui `ActionNotifications`, com notificações compactas no canto superior direito, usando Radix Toast. Os handlers de ações explícitas usam `useActionNotification` para informar sucesso ou erro com mensagem contextual. Não registrar notificações nos métodos compartilhados de leitura ou no polling, para evitar interrupções repetidas. As notificações permanecem durante navegação, não bloqueiam a tela nem movem o foco e informam falhas parciais de arquivamento em lote. Sucesso fecha após 5 segundos e erro após 8 segundos; passar o mouse ou focar a área pausa o tempo. Cada notificação pode ser fechada pelo X, e múltiplos resultados são empilhados. O layout se adapta à largura do celular e mantém anúncio acessível por leitor de tela.
+
+## Operação avançada
+
+**Nova operação → Tipo de operação** mantém Padrão como opção inicial. Avançada habilita o seletor Luna (mais econômico), Sol (equilíbrio recomendado) e Astra (mais potente e caro), com referência de preços e explicação do custo da busca. O modelo vale só para a análise. A lista identifica tipo/modelo e o detalhe mostra fontes, motivos, confiança da IA, custo separado e uma seção de análises inconclusivas para conferência, sem geração/envio desses casos. O histórico da empresa mantém as evidências e o painel exibe o acumulado das análises avançadas.

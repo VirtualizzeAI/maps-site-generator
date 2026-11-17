@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AnalysisCostSummary, AdvancedAnalysisReport } from "@/components/advanced-analysis";
 import { SiteUsage, GenerationCostSummary } from "@/components/site-generation-usage";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -42,6 +43,7 @@ const statusLabels: Record<string, string> = {
   awaiting_approval: "Aguardando aprovação",
   sent: "Mensagem enviada",
   failed: "Falha",
+  analysis_inconclusive: "Análise inconclusiva",
   cancelled: "Envio cancelado",
   discarded_no_phone: "Sem telefone",
   discarded_site_real: "Já possui site",
@@ -278,6 +280,9 @@ export function OperationDetailPage({ operationId }: { operationId: string }) {
                 </div>
               )}
               <LivePanel operation={operation} />
+              <p className="mt-3 text-sm text-slate-600">{operation.analysis_mode === "advanced" ? `Operação avançada · ${operation.analysis_model}` : "Operação padrão"}</p>
+              <AnalysisCostSummary totals={operation.analysis_totals} />
+              {groups.review.length > 0 && <section className="mt-4"><h2 className="font-semibold text-amber-700">Análises inconclusivas — confira antes de prospectar ({groups.review.length})</h2><div className="mt-3 grid gap-3 md:grid-cols-2">{groups.review.map(company=><CompanyCard key={company.id} company={company} />)}</div></section>}
               <GenerationCostSummary totals={operation.generation_totals} />
               <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
                 <Metric
@@ -544,6 +549,7 @@ function CompanyCard({ company }: { company: OperationCompany }) {
         )}
         <p>Listada em {new Date(company.listed_at).toLocaleString("pt-BR")}</p>
       </div>
+      {company.advanced_analysis && <AdvancedAnalysisReport report={company.advanced_analysis} />}
       {(company.site_generation_usage || company.generated_site_url) && <SiteUsage usage={company.site_generation_usage} />}
       {company.discard_reason && (
         <p className="mt-3 rounded-lg bg-slate-50 p-2 text-xs text-slate-600">
@@ -599,6 +605,7 @@ function CompanyCard({ company }: { company: OperationCompany }) {
 
 function groupCompanies(companies: OperationCompany[]) {
   const result = {
+    review: [] as OperationCompany[],
     listed: [] as OperationCompany[],
     creating: [] as OperationCompany[],
     awaitingApproval: [] as OperationCompany[],
@@ -606,7 +613,8 @@ function groupCompanies(companies: OperationCompany[]) {
     discarded: [] as OperationCompany[],
   };
   for (const company of companies) {
-    if (company.status === "found") result.listed.push(company);
+    if (company.status === "analysis_inconclusive") result.review.push(company);
+    else if (company.status === "found") result.listed.push(company);
     else if (company.status === "generating") result.creating.push(company);
     else if (company.status === "awaiting_approval")
       result.awaitingApproval.push(company);

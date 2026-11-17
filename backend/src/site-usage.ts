@@ -17,6 +17,8 @@ export interface SiteGenerationUsage {
 
 // USD por milhão de tokens, Standard. A tarifa usada fica congelada no registro.
 const rates: Record<string, [number, number, number, number]> = {
+  "gpt-6-luna": [0.1, 0.01, 0.125, 0.5],
+  "gpt-6-astra": [10, 1, 12.5, 50],
   "gpt-6-sol": [2, 0.2, 2.5, 10],
   "gpt-6.1-sol": [2, 0.1, 2.5, 10],
   "gpt-5-mini": [0.25, 0.025, 0.25, 2],
@@ -36,7 +38,7 @@ export function siteUsage(response: Record<string, unknown>, requestedModel: str
   const standard = !response.service_tier || response.service_tier === "default";
   const valid = input !== null && output !== null && cached !== null && write !== null && cached + write <= input;
   const long = baseModel.startsWith("gpt-6") && (input ?? 0) > 272000;
-  const pricing = rate && standard ? {input: rate[0] * (long ? 2 : 1), cached: rate[1] * (long ? 2 : 1), write: rate[2] * (long ? 2 : 1), output: rate[3] * (long ? 1.5 : 1), checked_at: "2026-10-24", source: `https://developers.openai.com/api/docs/models/${baseModel}`} : null;
+  const pricing = rate && standard ? {input: rate[0] * (long ? 2 : 1), cached: rate[1] * (long ? 2 : 1), write: rate[2] * (long ? 2 : 1), output: rate[3] * (long ? 1.5 : 1), checked_at: ["gpt-6-luna", "gpt-6-astra"].includes(baseModel) ? "2026-11-17" : "2026-10-24", source: `https://developers.openai.com/api/docs/models/${baseModel}`} : null;
   const cost = valid && pricing ? ((input - cached - write) * pricing.input + cached * pricing.cached + write * pricing.write + output * pricing.output) / 1e6 : null;
   return {
     source: "openai", model, response_id: typeof response.id === "string" ? response.id : null, recorded_at: new Date().toISOString(),

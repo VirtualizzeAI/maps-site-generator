@@ -1,6 +1,13 @@
 # Estado atual do Maps Site Generator
 
-Última revisão: 16 de novembro de 2026.
+Última revisão: 17 de novembro de 2026.
+
+## Operações avançadas com pesquisa web
+
+- Nova operação oferece Padrão (comportamento anterior, padrão para clientes antigos) e Avançada, com seletor Luna — mais econômico; Sol — equilíbrio recomendado (padrão avançado); Astra — mais potente e caro. Tipo/modelo são persistidos por operação e exibidos na lista/detalhe. Modelo da geração de sites continua nas Configurações.
+- Avançada usa OpenAI Responses + web_search, até 3 chamadas de ferramentas, 6.000 tokens de saída e 120 segundos por empresa. Só libera geração com pesquisa concluída, fontes e identidade por telefone/endereço com número, confiança da IA >=80 e nenhum site oficial identificado/conflito com Maps. Site oficial impede geração; dúvidas, falhas e respostas inválidas ficam em seção de análises inconclusivas, sem gerar/enviar. Não há endpoint de liberação/retomada de inconclusivos nesta versão. Deduplicação global e aprovação/intervalos existentes são preservados.
+- Evidências, sites, fontes, confiança e uso ficam no vínculo e histórico da empresa, com auditoria. Uso pago é salvo antes da interpretação. Custo de análise (tokens + chamadas web) é separado do custo dos sites, com acumulado por operação/organização e indicação de valores indisponíveis. Modo mock não consome serviços reais.
+- Migration `202611170001_advanced_analysis.sql` aplicada antes do backend; operação existente manteve tipo padrão. Validação: 78 testes e build do backend; lint/build do frontend; navegador desktop/mobile para seletor, modelos/preços, erro/nova tentativa, payload, fontes, custos e inconclusivos. API em organizações temporárias validou clientes antigos, três modelos/persistência, tipos/modelos inválidos, autenticação/perfis/isolamento, histórico e totais. Operações de teste foram agendadas no futuro e removidas; nenhuma pesquisa paga, site ou mensagem real foi executada. Dados reais existentes preservados.
 
 ## Notificações compactas e reinício autorizado da base
 
