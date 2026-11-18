@@ -46,6 +46,7 @@ export interface Operation {
 }
 
 export interface OperationCompany {
+  site_actions?: {site_only:boolean;site_and_outreach:boolean;approval_mode:"automatic"|"human_review";recipient:string|null};
   id: string;
   company_id: string;
   name: string;

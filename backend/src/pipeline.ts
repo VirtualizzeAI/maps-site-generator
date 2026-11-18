@@ -55,6 +55,8 @@ function integrationFor(operation: Operation): IntegrationSettings {
 
 export async function processNext() {
   if (processing) return false;
+  const queued=store.snapshot().operationCompanies.find(x=>x.status==="site_action_queued");
+  if(queued){processing=true;try{await processManualSiteAction(queued.id);}finally{processing=false;}return true;}
   const db = store.snapshot(),
     operation = db.operations
       .filter(
@@ -346,18 +348,60 @@ async function processCandidate(
       });
       return;
     }
+    if(report){
+      await store.mutate(db=>{
+        const op=db.operations.find(x=>x.id===operationId)!,link=db.operationCompanies.find(x=>x.id===prepared.linkId)!;
+        op.analyzed_count++;link.score=analysis.score;link.status="analysis_ready";link.discard_reason=null;link.updated_at=now();
+        db.events.push(event(op.organization_id,operationId,"advanced_analysis_ready_for_action",{},link.id));
+      });
+      return;
+    }
+    await store.mutate(db=>{
+      db.operations.find(x=>x.id===operationId)!.analyzed_count++;
+      db.operationCompanies.find(x=>x.id===prepared.linkId)!.score=analysis.score;
+    });
+    await generateAndDeliver(operationId, prepared, integration);
+
+  } catch (error) {
+    await store.mutate((db) => {
+      const link = db.operationCompanies.find(
+          (item) => item.id === prepared.linkId,
+        ),
+        op = db.operations.find((item) => item.id === operationId);
+      if (link && op) {
+        link.status = "failed";
+        link.discard_reason =
+          error instanceof Error ? error.message : String(error);
+        link.updated_at = now();
+        db.events.push(
+          event(
+            op.organization_id,
+            operationId,
+            "company_failed",
+            { error: link.discard_reason },
+            link.id,
+          ),
+        );
+      }
+    });
+  }
+}
+
+async function generateAndDeliver(operationId:string,prepared:{company:Company;linkId:string;candidate:SearchCandidate},integration:IntegrationSettings,siteOnly=false) {
+  const candidate=prepared.candidate;
     await store.mutate((db) => {
       const op = db.operations.find((item) => item.id === operationId)!,
         link = db.operationCompanies.find(
           (item) => item.id === prepared.linkId,
         )!;
-      op.analyzed_count++;
+
       op.current_stage = "Gerando e publicando site";
-      link.score = analysis.score;
+
       link.status = "generating";
       link.updated_at = now();
     });
-    const site = await createSite(candidate, integration, async usage => {
+    const existing = store.snapshot().operationCompanies.find(x=>x.id===prepared.linkId)!.generated_site_url;
+    const site = existing ? {url:existing} : await createSite(candidate, integration, async usage => {
       await store.mutate(db => {
         const link = db.operationCompanies.find(item => item.id === prepared.linkId)!;
         link.site_generation_usage = usage;
@@ -373,6 +417,15 @@ async function processCandidate(
       prepared.company,
       site.url,
     );
+    await store.mutate(db=>{
+      const op=db.operations.find(x=>x.id===operationId)!,link=db.operationCompanies.find(x=>x.id===prepared.linkId)!;
+      if(!existing)op.generated_count++;
+      link.generated_site_url=site.url;link.updated_at=now();
+      if(siteOnly){link.status="site_created";link.final_message=null;db.events.push(event(op.organization_id,operationId,"site_created_without_outreach",{},link.id));}
+    });
+    const latest=store.snapshot();
+    if(latest.operations.find(x=>x.id===operationId)?.archived_at||latest.companies.find(x=>x.id===prepared.company.id)?.archived_at)throw new Error("Empresa ou operação arquivada durante o processamento");
+    if(siteOnly)return;
     if (currentOperation.approval_mode === "automatic") {
       await waitForAutomaticSendInterval(() => {
         const history = store.snapshot();
@@ -393,8 +446,8 @@ async function processCandidate(
           (item) => item.id === prepared.linkId,
         )!,
         company = db.companies.find((item) => item.id === prepared.company.id)!;
-      op.generated_count++;
-      link.generated_site_url = site.url;
+
+      if(op.archived_at||company.archived_at)throw new Error("Empresa ou operação arquivada durante o processamento");
       link.final_message = content;
       op.current_stage =
         op.approval_mode === "human_review"
@@ -453,29 +506,25 @@ async function processCandidate(
         ),
       );
     });
-  } catch (error) {
-    await store.mutate((db) => {
-      const link = db.operationCompanies.find(
-          (item) => item.id === prepared.linkId,
-        ),
-        op = db.operations.find((item) => item.id === operationId);
-      if (link && op) {
-        link.status = "failed";
-        link.discard_reason =
-          error instanceof Error ? error.message : String(error);
-        link.updated_at = now();
-        db.events.push(
-          event(
-            op.organization_id,
-            operationId,
-            "company_failed",
-            { error: link.discard_reason },
-            link.id,
-          ),
-        );
-      }
-    });
-  }
+}
+
+export async function processManualSiteAction(linkId:string) {
+ const snapshot=store.snapshot(),link=snapshot.operationCompanies.find(x=>x.id===linkId);
+ if(!link||link.status!=="site_action_queued")return;
+ const op=snapshot.operations.find(x=>x.id===link.operation_id)!,company=snapshot.companies.find(x=>x.id===link.company_id)!;
+ try {
+  if(!link.requested_action||!link.requested_by)throw new Error("Solicitação manual incompleta");
+  if(!op||op.archived_at||!company||company.archived_at)throw new Error("Empresa ou operação arquivada");
+  const candidate:SearchCandidate={name:company.name,phone:company.phone,other_phones:company.other_phones,email:company.email,address:company.address,city:company.city||op.city,category:company.category||op.niche,website:company.website,maps_url:company.maps_url,social_links:company.social_links,source_id:company.source_id,raw_data:company.raw_data};
+  await generateAndDeliver(op.id,{company,linkId,candidate},integrationFor(op),link.requested_action==="site_only");
+ }catch(error){await store.mutate(db=>{const target=db.operationCompanies.find(x=>x.id===linkId)!;target.status="failed";target.discard_reason=error instanceof Error?error.message:"Falha na criação manual";target.updated_at=now();if(op)db.events.push(event(op.organization_id,op.id,"manual_site_action_failed",{error:target.discard_reason},linkId));});}
+ if(!op)return;
+ await store.mutate(db=>{
+  const target=db.operations.find(x=>x.id===op.id)!;
+  const ids=new Set(db.operationCompanies.filter(x=>x.operation_id===op.id).map(x=>x.id));
+  const pending=db.messages.some(x=>ids.has(x.operation_company_id)&&x.status==="pending_approval");
+  target.status=pending?"awaiting_approval":"completed";target.current_stage=pending?"Aguardando aprovação das mensagens":"Operação concluída";target.finished_at=pending?null:now();target.updated_at=now();target.current_company_id=null;target.current_company_name=null;
+ });
 }
 
 export function startWorker() {

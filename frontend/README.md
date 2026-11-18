@@ -63,3 +63,7 @@ O layout inclui `ActionNotifications`, com notificações compactas no canto sup
 ## Operação avançada
 
 **Nova operação → Tipo de operação** mantém Padrão como opção inicial. Avançada habilita o seletor Luna (mais econômico), Sol (equilíbrio recomendado) e Astra (mais potente e caro), com referência de preços e explicação do custo da busca. O modelo vale só para a análise. A lista identifica tipo/modelo e o detalhe mostra fontes, motivos, confiança da IA, custo separado e uma seção de análises inconclusivas para conferência, sem geração/envio desses casos. O histórico da empresa mantém as evidências e o painel exibe o acumulado das análises avançadas.
+
+## Modal de análise e criação por empresa
+
+No Kanban e em Análises inconclusivas, cartões avançados mostram só os dados da empresa, resultado/modelo/confiança e **Análise completa**, que abre um modal com todas as evidências e custos. **Criar site** publica sem preparar mensagem; **Criar e abordar** também prepara a abordagem, respeitando o modo da operação. As duas ações pedem confirmação e mostram resultado por notificação lateral. Ficam disponíveis somente quando autorizadas pela API. Resultados elegíveis de operações avançadas agora aguardam essa escolha por empresa; a operação padrão continua como antes. Sites sem abordagem ficam em seção própria, com opção de abordar depois usando a mesma URL.

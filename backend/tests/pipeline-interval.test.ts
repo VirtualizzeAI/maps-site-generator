@@ -10,7 +10,7 @@ vi.mock("../src/store.js",()=>({store:{
     });fixture.queue=work;return work;
   },
 }}));
-vi.mock("../src/auth.js",()=>({id:()=>`fixture-${++fixture.nextId}`,now:()=>new Date(Date.now()).toISOString()}));
+vi.mock("../src/auth.js",()=>({id:()=>`fixture-${++fixture.nextId}`,now:()=>new Date(Date.now()).toISOString(),ApiError:class extends Error{constructor(public statusCode:number,message:string){super(message);}}}));
 vi.mock("../src/integrations/search.js",()=>({searchCompanies:vi.fn()}));
 vi.mock("../src/integrations/analyzer.js",()=>({analyzePresence:vi.fn(async()=>({decision:"eligible",score:10,evidence:{},discovered:{emails:[],phones:[],socialLinks:[]}}))}));
 vi.mock("../src/integrations/advanced-analyzer.js",()=>({analyzeAdvanced:vi.fn()}));
@@ -19,7 +19,8 @@ vi.mock("../src/integrations/whatsapp.js",()=>({sendWhatsApp:vi.fn(async(recipie
   fixture.sendTimes.push(Date.now());return {providerMessageId:`mock-${fixture.sendTimes.length}`,originalRecipient:recipient,actualRecipient:recipient,redirected:false};
 })}));
 
-import { processOperation } from "../src/pipeline.js";
+import { queueSiteAction } from "../src/site-actions.js";
+import { processManualSiteAction, processOperation } from "../src/pipeline.js";
 import { store } from "../src/store.js";
 import { searchCompanies } from "../src/integrations/search.js";
 import { analyzeAdvanced } from "../src/integrations/advanced-analyzer.js";
@@ -39,6 +40,27 @@ beforeEach(()=>{
 afterEach(()=>vi.useRealTimers());
 
 describe("intervalo no processamento das operações",()=>{
+  async function readyManual(){
+    fixture.db.operations[0]!.analysis_mode="advanced";
+    vi.mocked(analyzeAdvanced).mockResolvedValue({model:"gpt-6.1-sol",decision:"analysis_inconclusive",reason:"Conferir",confidence:50,sources:[],websites:[],usage:null,checked_at:new Date().toISOString()});
+    await processOperation("operation");return fixture.db.operationCompanies[0]!.id;
+  }
+  it("cria somente site, sem mensagem, e depois aborda sem nova geração",async()=>{
+    const linkId=await readyManual();fixture.db.operations[0]!.approval_mode="human_review";
+    await store.mutate(db=>queueSiteAction(db,linkId,"site_only","admin","event",new Date().toISOString()));
+    await processManualSiteAction(linkId);expect(fixture.db.operationCompanies[0]!.status).toBe("site_created");expect(fixture.db.messages).toHaveLength(0);expect(fixture.sendTimes).toHaveLength(0);expect(createSite).toHaveBeenCalledTimes(1);
+    await store.mutate(db=>queueSiteAction(db,linkId,"site_and_outreach","admin","event2",new Date().toISOString()));
+    await processManualSiteAction(linkId);expect(createSite).toHaveBeenCalledTimes(1);expect(fixture.db.operations[0]!.generated_count).toBe(1);expect(fixture.db.messages[0]?.status).toBe("pending_approval");expect(fixture.sendTimes).toHaveLength(0);
+    await processManualSiteAction(linkId);expect(fixture.db.messages).toHaveLength(1);
+  });
+  it("criar e abordar respeita envio automático",async()=>{
+    const linkId=await readyManual();await store.mutate(db=>queueSiteAction(db,linkId,"site_and_outreach","admin","event",new Date().toISOString()));await processManualSiteAction(linkId);expect(fixture.sendTimes).toHaveLength(1);expect(fixture.db.operationCompanies[0]!.status).toBe("sent");
+  });
+  it("preserva o site publicado quando o envio falha",async()=>{
+    const linkId=await readyManual();const {sendWhatsApp}=await import("../src/integrations/whatsapp.js");vi.mocked(sendWhatsApp).mockRejectedValueOnce(new Error("Falha externa"));
+    await store.mutate(db=>queueSiteAction(db,linkId,"site_and_outreach","admin","event",new Date().toISOString()));await processManualSiteAction(linkId);expect(fixture.db.operationCompanies[0]).toMatchObject({status:"failed",generated_site_url:expect.stringContaining("https://")});expect(fixture.db.operations[0]!.generated_count).toBe(1);expect(fixture.db.messages).toHaveLength(0);
+  });
+
   it("modo avançado inconclusivo não gera nem envia e salva evidências",async()=>{
     fixture.db.operations[0]!.analysis_mode="advanced";
     vi.mocked(analyzeAdvanced).mockResolvedValue({model:"gpt-6.1-sol",decision:"analysis_inconclusive",reason:"Homônimas",confidence:50,sources:[],websites:[],usage:null,checked_at:new Date().toISOString()});
@@ -46,10 +68,10 @@ describe("intervalo no processamento das operações",()=>{
     expect(createSite).not.toHaveBeenCalled();expect(fixture.sendTimes).toHaveLength(0);
     expect(fixture.db.operationCompanies.every(c=>c.status==="analysis_inconclusive"&&c.advanced_analysis?.reason==="Homônimas")).toBe(true);
   });
-  it("modo avançado elegível usa o modelo selecionado e prepara aprovação humana",async()=>{
+  it("modo avançado elegível usa o modelo selecionado e aguarda ação por empresa",async()=>{
     fixture.db.operations[0]!.analysis_mode="advanced";fixture.db.operations[0]!.analysis_model="gpt-6-luna";fixture.db.operations[0]!.approval_mode="human_review";
     vi.mocked(analyzeAdvanced).mockResolvedValue({model:"gpt-6-luna",decision:"eligible",reason:"Sem site",confidence:95,sources:[],websites:[],usage:null,checked_at:new Date().toISOString()});
-    await processOperation("operation");expect(vi.mocked(analyzeAdvanced).mock.calls[0]?.[2]).toBe("gpt-6-luna");expect(createSite).toHaveBeenCalledTimes(2);expect(fixture.db.messages.every(m=>m.status==="pending_approval")).toBe(true);expect(fixture.sendTimes).toHaveLength(0);
+    await processOperation("operation");expect(vi.mocked(analyzeAdvanced).mock.calls[0]?.[2]).toBe("gpt-6-luna");expect(createSite).not.toHaveBeenCalled();expect(fixture.db.operationCompanies.every(c=>c.status==="analysis_ready")).toBe(true);expect(fixture.db.messages).toHaveLength(0);expect(fixture.sendTimes).toHaveLength(0);
   });
   it("site próprio encontrado no avançado impede geração e envio",async()=>{
     fixture.db.operations[0]!.analysis_mode="advanced";

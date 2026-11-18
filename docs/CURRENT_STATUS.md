@@ -1,6 +1,14 @@
 # Estado atual do Maps Site Generator
 
-Última revisão: 17 de novembro de 2026.
+Última revisão: 18 de novembro de 2026.
+
+## Análise completa em modal e ações por empresa
+
+- Cartões avançados no Kanban e na seção de inconclusivos exibem dados da empresa, resultado, modelo/confiança e Análise completa. Modal acessível reúne justificativa, sites, fontes, custos e informações do processamento, com fechamento por X/Escape e adaptação mobile. Detalhes longos/custos saíram dos cartões.
+- Operações avançadas passam a concluir a pesquisa e aguardar escolha por empresa, inclusive resultados elegíveis (`analysis_ready`). Criar site publica sem preparar mensagens; Criar e abordar prepara mensagem e respeita aprovação humana/automático e intervalo. Site já criado é reaproveitado na abordagem posterior. Padrão mantém o fluxo anterior.
+- Administradores/operadores podem solicitar ações em análises prontas, inconclusivas, sites próprios identificados e sites criados sem abordagem. Backend valida organização, perfil, arquivamento, telefone na abordagem, estado e histórico, serializa pedidos e registra autor/ação. Não permite ignorar deduplicação, mensagens existentes ou contato anterior. Enquanto a operação processa, novas solicitações são bloqueadas. Falhas não são repetidas automaticamente; filas ainda não iniciadas são persistidas, mas processamento interrompido no meio requer conferência.
+- Migration `202611180001_manual_site_actions.sql` aplicada antes do backend. Worker único executa fila manual sem repetir análise, preserva URL/custo antes de preparar/enviar mensagem e exibe sites sem abordagem em seção própria. Aprovar outra mensagem não conclui operação com geração manual em andamento.
+- Validação: 86 testes e build backend; lint/build frontend; navegador para resumo/modal, fontes/custos, foco/Escape, ações no Kanban/inconclusivos, desistência/erro/fila e mobile. API em organizações temporárias validou permissões/isolamento, disponibilidade por perfil, estados/deduplicação, persistência/autoria, fila/worker e reaproveitamento de site com preparação de aprovação humana. Testes de geração/envio usaram mocks; teste real de API reutilizou URL fictícia já cadastrada e não aprovou mensagem. Fixtures removidas; nenhuma pesquisa/geração paga, publicação ou envio real executado.
 
 ## Operações avançadas com pesquisa web
 
