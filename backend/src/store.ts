@@ -128,6 +128,8 @@ const tables: TableConfig[] = [
       "generated_site_url",
       "site_generation_usage",
       "advanced_analysis",
+      "requested_action",
+      "requested_by",
       "final_message",
       "created_at",
       "updated_at",

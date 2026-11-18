@@ -103,6 +103,8 @@ export interface Company {
   updated_at: string;
 }
 export interface OperationCompany {
+  requested_action?: "site_only" | "site_and_outreach" | null;
+  requested_by?: string | null;
   id: string;
   organization_id: string;
   operation_id: string;

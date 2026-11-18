@@ -29,7 +29,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { archiveOperation, getOperation } from "./services/operations";
+import { archiveOperation, getOperation, requestCompanySiteAction } from "./services/operations";
 import type { OperationCompany, OperationDetail } from "./types";
 import { clearToken, getToken } from "@/services/api/client";
 import { me, type CurrentUser } from "@/services/auth";
@@ -38,6 +38,9 @@ import { useActionNotification } from "@/components/action-notifications";
 
 const statusLabels: Record<string, string> = {
   found: "Localizada",
+  analysis_ready: "Análise concluída",
+  site_action_queued: "Criação na fila",
+  site_created: "Site criado",
   blocked_history: "Bloqueada pelo histórico",
   generating: "Gerando site",
   awaiting_approval: "Aguardando aprovação",
@@ -282,7 +285,8 @@ export function OperationDetailPage({ operationId }: { operationId: string }) {
               <LivePanel operation={operation} />
               <p className="mt-3 text-sm text-slate-600">{operation.analysis_mode === "advanced" ? `Operação avançada · ${operation.analysis_model}` : "Operação padrão"}</p>
               <AnalysisCostSummary totals={operation.analysis_totals} />
-              {groups.review.length > 0 && <section className="mt-4"><h2 className="font-semibold text-amber-700">Análises inconclusivas — confira antes de prospectar ({groups.review.length})</h2><div className="mt-3 grid gap-3 md:grid-cols-2">{groups.review.map(company=><CompanyCard key={company.id} company={company} />)}</div></section>}
+              {groups.review.length > 0 && <section className="mt-4"><h2 className="font-semibold text-amber-700">Análises inconclusivas — confira antes de prospectar ({groups.review.length})</h2><div className="mt-3 grid gap-3 md:grid-cols-2">{groups.review.map(company=><CompanyCard key={company.id} company={company} onQueued={refresh} />)}</div></section>}
+              {groups.sitesReady.length>0&&<section className="mt-4"><h2 className="font-semibold text-emerald-700">Sites criados sem abordagem ({groups.sitesReady.length})</h2><div className="mt-3 grid gap-3 md:grid-cols-2">{groups.sitesReady.map(company=><CompanyCard key={company.id} company={company} onQueued={refresh} />)}</div></section>}
               <GenerationCostSummary totals={operation.generation_totals} />
               <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
                 <Metric
@@ -316,7 +320,7 @@ export function OperationDetailPage({ operationId }: { operationId: string }) {
                   tone="bg-slate-100 text-slate-600"
                 />
               </div>
-              <Kanban groups={groups} />
+              <Kanban groups={groups} onQueued={refresh} />
             </>
           )}
         </div>
@@ -442,37 +446,42 @@ function Metric({
 }
 
 type KanbanGroups = ReturnType<typeof groupCompanies>;
-function Kanban({ groups }: { groups: KanbanGroups }) {
+function Kanban({ groups, onQueued }: { groups: KanbanGroups; onQueued:()=>Promise<void> }) {
   return (
     <div className="mt-6 overflow-x-auto pb-3">
       <div className="grid min-w-[1480px] grid-cols-5 gap-4">
         <KanbanColumn
           title="1. Lista de empresas"
           description="Empresas localizadas"
+          onQueued={onQueued}
           companies={groups.listed}
           tone="border-blue-300"
         />
         <KanbanColumn
           title="2. Criando site"
           description="Geração e publicação"
+          onQueued={onQueued}
           companies={groups.creating}
           tone="border-cyan-300"
         />
         <KanbanColumn
           title="3. Aguardando aprovação humana"
           description="Site e mensagem prontos"
+          onQueued={onQueued}
           companies={groups.awaitingApproval}
           tone="border-amber-300"
         />
         <KanbanColumn
           title="4. Enviado"
           description="Mensagem enviada"
+          onQueued={onQueued}
           companies={groups.sent}
           tone="border-emerald-300"
         />
         <KanbanColumn
           title="5. Descartado"
           description="Sem nova prospecção"
+          onQueued={onQueued}
           companies={groups.discarded}
           tone="border-slate-300"
         />
@@ -486,11 +495,13 @@ function KanbanColumn({
   description,
   companies,
   tone,
+  onQueued,
 }: {
   title: string;
   description: string;
   companies: OperationCompany[];
   tone: string;
+  onQueued:()=>Promise<void>;
 }) {
   return (
     <section
@@ -507,7 +518,7 @@ function KanbanColumn({
       </div>
       <div className="max-h-[620px] space-y-3 overflow-y-auto p-3">
         {companies.map((company) => (
-          <CompanyCard key={company.id} company={company} />
+          <CompanyCard key={company.id} company={company} onQueued={onQueued} />
         ))}
         {!companies.length && (
           <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 p-6 text-center text-xs text-slate-400">
@@ -519,7 +530,21 @@ function KanbanColumn({
   );
 }
 
-function CompanyCard({ company }: { company: OperationCompany }) {
+function CompanyCard({ company, onQueued }: { company: OperationCompany; onQueued:()=>Promise<void> }) {
+  const notify=useActionNotification(),[busy,setBusy]=useState(false);
+  async function request(action:"site_only"|"site_and_outreach") {
+    const token=getToken();if(!token||busy)return;
+    const delivery=action==="site_only"?"Nenhuma mensagem será preparada ou enviada.":company.site_actions?.approval_mode==="human_review"?"A mensagem ficará aguardando aprovação humana.":`A mensagem será enviada para ${company.site_actions?.recipient || company.phone}.`;
+    if(!window.confirm(`${action==="site_only"?"Criar site":"Criar e abordar"} para ${company.name}? ${delivery}`))return;
+    setBusy(true);
+    try {await requestCompanySiteAction(token,company.id,action);notify({variant:"success",title:"Solicitação adicionada à fila",description:delivery});await onQueued();}
+    catch(error){notify({variant:"error",title:"Não foi possível solicitar a criação",description:error instanceof Error?error.message:"Tente novamente."});}
+    finally{setBusy(false);}
+  }
+  const actions=(company.site_actions?.site_only||company.site_actions?.site_and_outreach)?<div className="flex flex-wrap gap-2">
+    {company.site_actions.site_only&&<button disabled={busy} onClick={()=>request("site_only")} className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 disabled:opacity-50">{busy?"Aguarde...":"Criar site"}</button>}
+    {company.site_actions.site_and_outreach&&<button disabled={busy} onClick={()=>request("site_and_outreach")} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">{busy?"Aguarde...":"Criar e abordar"}</button>}
+  </div>:null;
   return (
     <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-2">
@@ -549,9 +574,13 @@ function CompanyCard({ company }: { company: OperationCompany }) {
         )}
         <p>Listada em {new Date(company.listed_at).toLocaleString("pt-BR")}</p>
       </div>
-      {company.advanced_analysis && <AdvancedAnalysisReport report={company.advanced_analysis} />}
-      {(company.site_generation_usage || company.generated_site_url) && <SiteUsage usage={company.site_generation_usage} />}
-      {company.discard_reason && (
+      {company.advanced_analysis && <AdvancedAnalysisReport report={company.advanced_analysis} companyName={company.name} actions={actions} extraDetails={<>
+        {(company.site_generation_usage || company.generated_site_url)&&<SiteUsage usage={company.site_generation_usage} />}
+        {company.discard_reason&&<p className="mt-3 text-sm text-slate-600">{company.discard_reason}</p>}
+      </>} />}
+      {actions&&<div className="mt-3">{actions}</div>}
+      {!company.advanced_analysis && (company.site_generation_usage || company.generated_site_url) && <SiteUsage usage={company.site_generation_usage} />}
+      {!company.advanced_analysis && company.discard_reason && (
         <p className="mt-3 rounded-lg bg-slate-50 p-2 text-xs text-slate-600">
           {company.discard_reason}
         </p>
@@ -605,6 +634,7 @@ function CompanyCard({ company }: { company: OperationCompany }) {
 
 function groupCompanies(companies: OperationCompany[]) {
   const result = {
+    sitesReady: [] as OperationCompany[],
     review: [] as OperationCompany[],
     listed: [] as OperationCompany[],
     creating: [] as OperationCompany[],
@@ -613,9 +643,10 @@ function groupCompanies(companies: OperationCompany[]) {
     discarded: [] as OperationCompany[],
   };
   for (const company of companies) {
-    if (company.status === "analysis_inconclusive") result.review.push(company);
-    else if (company.status === "found") result.listed.push(company);
-    else if (company.status === "generating") result.creating.push(company);
+    if(company.status === "site_created")result.sitesReady.push(company);
+    else if (company.status === "analysis_inconclusive") result.review.push(company);
+    else if (["found","analysis_ready"].includes(company.status)) result.listed.push(company);
+    else if (["generating","site_action_queued"].includes(company.status)) result.creating.push(company);
     else if (company.status === "awaiting_approval")
       result.awaitingApproval.push(company);
     else if (company.status === "sent") result.sent.push(company);

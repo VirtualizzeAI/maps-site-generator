@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import { queueSiteAction, validateSiteAction } from "./site-actions.js";
 import { operationSchema } from "./operation-schema.js";
 import { summarizeAnalysis } from "./integrations/advanced-analyzer.js";
 import { cancelPendingMessage } from "./cancel-message.js";
@@ -197,6 +198,7 @@ app.get("/api/v1/operations/:id", async (request) => {
   );
   if (!operation) throw new ApiError(404, "Operação não encontrada");
   membership(user.id, operation.organization_id);
+  const canManage = db.memberships.some(m => m.user_id === user.id && m.organization_id === operation.organization_id && ["admin", "operator"].includes(m.role));
   const integration = integrationOf(db.integrations, operation.organization_id);
   return {
     ...operation,
@@ -234,11 +236,24 @@ app.get("/api/v1/operations/:id", async (request) => {
           generated_site_url: link.generated_site_url,
           site_generation_usage: link.site_generation_usage ?? null,
           advanced_analysis: link.advanced_analysis ?? null,
+          site_actions: {...Object.fromEntries((["site_only", "site_and_outreach"] as const).map(action => {
+            try { if (!canManage) return [action, false]; validateSiteAction(db, link.id, action); return [action, true]; } catch { return [action, false]; }
+          })), approval_mode: operation.approval_mode, recipient: integration.whatsapp_test_mode ? integration.whatsapp_test_number : company.phone},
           final_message: link.final_message,
           updated_at: link.updated_at,
         };
       }),
   };
+});
+
+app.post("/api/v1/operation-companies/:id/site-action", async request => {
+  const user = await currentUser(request), linkId = (request.params as {id:string}).id;
+  const {action} = z.object({action:z.enum(["site_only","site_and_outreach"])}).strict().parse(request.body);
+  const link = store.snapshot().operationCompanies.find(x=>x.id===linkId);
+  if(!link)throw new ApiError(404,"Empresa não encontrada");
+  membership(user.id,link.organization_id,["admin","operator"]);
+  await store.mutate(db=>queueSiteAction(db,linkId,action,user.id,id(),now()));
+  return {success:true,status:"site_action_queued"};
 });
 
 app.delete("/api/v1/operations/:id", async (request) => {
@@ -523,7 +538,7 @@ app.post("/api/v1/messages/:id/approve", async (request) => {
           (candidate) => candidate.id === item.operation_company_id,
         )?.operation_id === operation.id,
     );
-    if (!pending) {
+    if (!pending && targetOperation.status === "awaiting_approval") {
       targetOperation.status = "completed";
       targetOperation.current_stage = "Operação concluída";
       targetOperation.finished_at = now();
