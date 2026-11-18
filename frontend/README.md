@@ -67,3 +67,7 @@ O layout inclui `ActionNotifications`, com notificações compactas no canto sup
 ## Modal de análise e criação por empresa
 
 No Kanban e em Análises inconclusivas, cartões avançados mostram só os dados da empresa, resultado/modelo/confiança e **Análise completa**, que abre um modal com todas as evidências e custos. **Criar site** publica sem preparar mensagem; **Criar e abordar** também prepara a abordagem, respeitando o modo da operação. As duas ações pedem confirmação e mostram resultado por notificação lateral. Ficam disponíveis somente quando autorizadas pela API. Resultados elegíveis de operações avançadas agora aguardam essa escolha por empresa; a operação padrão continua como antes. Sites sem abordagem ficam em seção própria, com opção de abordar depois usando a mesma URL.
+
+## Lista de empresas e detalhes
+
+Empresas usa linhas em lista responsiva, com nome, segmento/cidade, telefone, **Site gerado** e **Detalhes**. O link principal procura o último vínculo com URL publicada, ignorando operações posteriores sem site; todos os sites continuam acessíveis no histórico. Sem URL publicada, mostra Sem site gerado. Operações, análises completas, fontes, custos e demais contatos ficam no modal de detalhes da empresa, sem abrir um segundo modal para consultar a análise. Seleção, arquivamento individual/em lote e permissões são preservados.

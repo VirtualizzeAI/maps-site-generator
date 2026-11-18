@@ -1,7 +1,9 @@
 "use client";
 
-import { analysisModelOptions, AnalysisCostSummary, AdvancedAnalysisReport, type AnalysisModel, type AnalysisTotals, type AdvancedReport } from "@/components/advanced-analysis";
+import { analysisModelOptions, AnalysisCostSummary, AdvancedAnalysisDetails, type AnalysisModel, type AnalysisTotals, type AdvancedReport } from "@/components/advanced-analysis";
 import { SiteUsage, GenerationCostSummary, type SiteGenerationUsage, type GenerationTotals } from "@/components/site-generation-usage";
+import { Dialog } from "radix-ui";
+import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -119,6 +121,9 @@ type TeamUser = {
 
 const labels: Record<string, string> = {
   cancelled: "Envio cancelado",
+  site_created: "Site criado",
+  site_action_queued: "Criação na fila",
+  analysis_ready: "Análise concluída",
   analysis_inconclusive: "Análise inconclusiva",
   queued: "Na fila",
   scheduled: "Agendada",
@@ -782,163 +787,63 @@ function Companies({
           </div>
         )}
       </div>
-      <div className="grid gap-4 xl:grid-cols-2">
-        {companies.map((company) => {
-          const isSelected = selected.includes(company.id);
-          return (
-            <article
-              key={company.id}
-              className={`rounded-2xl border bg-white p-5 shadow-sm ${isSelected ? "border-blue-400 ring-2 ring-blue-100" : ""}`}
-            >
-              <div className="flex items-start justify-between gap-4">
-                {canArchive && (
-                  <label className="mt-1 flex cursor-pointer items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggle(company.id)}
-                      aria-label={`Selecionar ${company.name}`}
-                      className="h-4 w-4 accent-blue-600"
-                    />
-                  </label>
-                )}
-                <div className="min-w-0 flex-1">
-                  <h2 className="font-bold">{company.name}</h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {company.category || "Segmento não informado"} ·{" "}
-                    {company.city || "Cidade não informada"}
-                  </p>
-                </div>
-                {canArchive && (
-                  <button
-                    disabled={busy === company.id || archivingSelected}
-                    title="Arquivar empresa"
-                    onClick={() => archive(company)}
-                    className="rounded-lg p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
-                  >
-                    {busy === company.id ? (
-                      <Loader2 className="animate-spin" size={17} />
-                    ) : (
-                      <Trash2 size={17} />
-                    )}
-                  </button>
-                )}
-              </div>
-              <div className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
-                {company.address && (
-                  <p className="flex gap-2">
-                    <MapPin className="mt-0.5 shrink-0" size={15} />
-                    {company.address}
-                  </p>
-                )}
-                <div>
-                  {company.phone && (
-                    <p className="flex items-center gap-2">
-                      <Phone size={15} />
-                      {company.phone}
-                    </p>
-                  )}
-                  {company.other_phones.map((phone) => (
-                    <p key={phone} className="ml-6 text-xs">
-                      {phone}
-                    </p>
-                  ))}
-                </div>
-                {company.email && (
-                  <p className="flex items-center gap-2">
-                    <Mail size={15} />
-                    {company.email}
-                  </p>
-                )}
-                <p>
-                  Pesquisada em{" "}
-                  {new Date(company.first_seen_at).toLocaleString("pt-BR")}
-                </p>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-3 text-xs font-semibold">
-                {company.maps_url && (
-                  <a
-                    target="_blank"
-                    rel="noreferrer"
-                    href={company.maps_url}
-                    className="text-blue-600"
-                  >
-                    Google Maps
-                  </a>
-                )}
-                {company.website && (
-                  <a
-                    target="_blank"
-                    rel="noreferrer"
-                    href={company.website}
-                    className="text-blue-600"
-                  >
-                    Site original
-                  </a>
-                )}
-                {company.social_links.map((link, index) => (
-                  <a
-                    key={link}
-                    target="_blank"
-                    rel="noreferrer"
-                    href={link}
-                    className="text-blue-600"
-                  >
-                    Rede social {index + 1}
-                  </a>
-                ))}
-              </div>
-              <div className="mt-4 border-t pt-4">
-                <p className="text-xs font-semibold uppercase text-slate-400">
-                  Operações em que foi listada
-                </p>
-                <div className="mt-2 space-y-2">
-                  {company.operations.map((operation) => (
-                    <div
-                      key={operation.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 p-2 text-xs"
-                    >
-                      <button
-                        onClick={() =>
-                          window.location.assign(`/operations/${operation.id}`)
-                        }
-                        className="text-left font-semibold text-slate-700 hover:text-blue-600"
-                      >
-                        {operation.niche} em {operation.city}
-                        <span className="ml-2 font-normal text-slate-400">
-                          {new Date(operation.listed_at).toLocaleString(
-                            "pt-BR",
-                          )}
-                        </span>
-                      </button>
-                      {operation.advanced_analysis && <div className="w-full"><AdvancedAnalysisReport report={operation.advanced_analysis} /></div>}
-                      {(operation.site_generation_usage || operation.generated_site_url) && <div className="w-full"><SiteUsage usage={operation.site_generation_usage} /></div>}
-                      {operation.generated_site_url && (
-                        <a
-                          href={operation.generated_site_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-emerald-600"
-                        >
-                          Site gerado
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </article>
-          );
+      <ul aria-label="Lista de empresas" className="divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        {companies.map(company=>{
+          const isSelected=selected.includes(company.id);
+          const generatedSites=company.operations.filter(op=>op.generated_site_url&&/^https?:\/\//i.test(op.generated_site_url))
+            .sort((a,b)=>(Date.parse(b.listed_at)||0)-(Date.parse(a.listed_at)||0));
+          const latestSite=generatedSites[0]?.generated_site_url;
+          return <li key={company.id} className={`flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 ${isSelected?"bg-blue-50":""}`}>
+            {canArchive&&<input type="checkbox" checked={isSelected} onChange={()=>toggle(company.id)} aria-label={`Selecionar ${company.name}`} className="h-4 w-4 shrink-0 accent-blue-600" />}
+            <div className="min-w-0 flex-1 basis-44"><h3 className="break-words font-semibold text-slate-900">{company.name}</h3><p className="mt-1 text-xs text-slate-500">{company.category||"Segmento não informado"} · {company.city||"Cidade não informada"}</p></div>
+            <p className="text-sm text-slate-600">{company.phone||"Sem telefone"}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              {latestSite?<a href={latestSite} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">Site gerado <ExternalLink size={14} /></a>:<span className="text-xs text-slate-400">Sem site gerado</span>}
+              <CompanyDetails company={company} />
+              {canArchive&&<button disabled={busy===company.id||archivingSelected} aria-label={`Arquivar ${company.name}`} title="Arquivar empresa" onClick={()=>archive(company)} className="rounded-lg p-2 text-red-600 hover:bg-red-50 disabled:opacity-50">{busy===company.id?<Loader2 size={17} className="animate-spin" />:<Trash2 size={17} />}</button>}
+            </div>
+          </li>;
         })}
-        {!companies.length && (
-          <div className="col-span-full rounded-2xl border border-dashed bg-white p-12 text-center text-slate-500">
-            Nenhuma empresa no histórico.
-          </div>
-        )}
-      </div>
+        {!companies.length&&<li className="p-10 text-center text-sm text-slate-500">Nenhuma empresa no histórico.</li>}
+      </ul>
     </>
   );
 }
+function CompanyDetails({company}:{company:Company}) {
+  return <Dialog.Root>
+    <Dialog.Trigger className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Detalhes</Dialog.Trigger>
+    <Dialog.Portal><Dialog.Overlay className="fixed inset-0 z-[70] bg-slate-950/50" />
+      <Dialog.Content className="fixed left-1/2 top-1/2 z-[71] max-h-[85dvh] w-[calc(100%_-_2rem)] max-w-3xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl outline-none">
+        <div className="flex items-start justify-between gap-4"><Dialog.Title className="break-words text-lg font-bold text-slate-900">{company.name}</Dialog.Title><Dialog.Close aria-label="Fechar detalhes da empresa" className="shrink-0 rounded-lg p-1 text-slate-500 hover:bg-slate-100"><X size={20} /></Dialog.Close></div>
+        <Dialog.Description className="mt-2 text-sm text-slate-500">Dados da empresa, sites gerados, histórico de operações, análises e custos.</Dialog.Description>
+        <section className="mt-5 space-y-2 text-sm text-slate-600" aria-label="Dados da empresa">
+          <p>{company.category||"Segmento não informado"} · {company.city||"Cidade não informada"}</p>
+          {company.address&&<p className="flex gap-2"><MapPin size={15} className="shrink-0" />{company.address}</p>}
+          {company.phone&&<p className="flex gap-2"><Phone size={15} className="shrink-0" />{company.phone}</p>}
+          {company.other_phones.map(phone=><p key={phone}>{phone}</p>)}
+          {company.email&&<p className="flex gap-2 break-all"><Mail size={15} className="shrink-0" />{company.email}</p>}
+          <p>Pesquisada em {new Date(company.first_seen_at).toLocaleString("pt-BR")}</p>
+          <div className="flex flex-wrap gap-3 text-xs font-semibold">
+            {company.maps_url&&<a href={company.maps_url} target="_blank" rel="noreferrer" className="text-blue-600">Google Maps</a>}
+            {company.website&&<a href={company.website} target="_blank" rel="noreferrer" className="text-blue-600">Site original</a>}
+            {company.social_links.map((url,i)=><a key={url} href={url} target="_blank" rel="noreferrer" className="text-blue-600">Rede social {i+1}</a>)}
+          </div>
+        </section>
+        <section className="mt-6 border-t pt-4"><h3 className="font-semibold text-slate-900">Operações, análises e custos</h3>
+          <div className="mt-3 space-y-4">{company.operations.map(op=><section key={op.id} className="rounded-xl border border-slate-200 p-4">
+            <Link href={`/operations/${op.id}`} className="text-sm font-semibold text-blue-700 hover:underline">{op.niche} em {op.city}</Link>
+            <p className="mt-1 text-xs text-slate-500">{labels[op.status]||op.status} · {new Date(op.listed_at).toLocaleString("pt-BR")}</p>
+            {op.generated_site_url&&/^https?:\/\//i.test(op.generated_site_url)&&<a href={op.generated_site_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-700">Site gerado <ExternalLink size={14} /></a>}
+            {op.advanced_analysis&&<AdvancedAnalysisDetails report={op.advanced_analysis} />}
+            {(op.site_generation_usage||op.generated_site_url)&&<SiteUsage usage={op.site_generation_usage} />}
+          </section>)}</div>
+          {!company.operations.length&&<p className="mt-3 text-sm text-slate-500">Nenhuma operação vinculada.</p>}
+        </section>
+      </Dialog.Content>
+    </Dialog.Portal>
+  </Dialog.Root>;
+}
+
 function Reviews({
   canManage,
   messages,

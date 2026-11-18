@@ -2,6 +2,12 @@
 
 Última revisão: 18 de novembro de 2026.
 
+## Listagem de empresas em linhas e botão do site
+
+- Empresas passa a usar lista de linhas responsivas, com nome, segmento/cidade, telefone e ações Site gerado/Detalhes. Site gerado fica visível fora do histórico, com nova aba, usando o vínculo mais recente com URL válida (operações posteriores bloqueadas/sem site não escondem links anteriores). Ausência de URL é indicada explicitamente.
+- Modal de detalhes reúne contatos, operações, status, todos os sites, análises completas, fontes e custos. Análise é exibida diretamente no modal da empresa, evitando modais sobrepostos. Lista não exibe histórico/custos expandidos. Dados e API existentes foram preservados, sem alteração de backend ou reinício de serviço.
+- Validação: lint/build do frontend; navegador desktop/mobile para lista/links recentes e antigos, operação posterior sem URL, detalhes/custos apenas no modal, foco/Escape, arquivamento individual/em lote, vazio e perfil visualizador. Dados e requisições de ações foram simulados; consulta real somente leitura confirmou links persistidos no banco. Nenhum dado operacional foi alterado nem mensagem enviada.
+
 ## Análise completa em modal e ações por empresa
 
 - Cartões avançados no Kanban e na seção de inconclusivos exibem dados da empresa, resultado, modelo/confiança e Análise completa. Modal acessível reúne justificativa, sites, fontes, custos e informações do processamento, com fechamento por X/Escape e adaptação mobile. Detalhes longos/custos saíram dos cartões.
