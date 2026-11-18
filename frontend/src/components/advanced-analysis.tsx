@@ -18,7 +18,7 @@ export interface AdvancedReport {
 export interface AnalysisTotals {analyzed: number; web_search_calls: number; total_tokens: number; estimated_cost_usd: number; unpriced: number}
 const usd=(n:number)=>`US$ ${n.toLocaleString("pt-BR",{minimumFractionDigits:6,maximumFractionDigits:6})}`;
 const safe=(url:string)=>/^https?:\/\//i.test(url);
-function AnalysisDetails({report}:{report:AdvancedReport}) {
+export function AdvancedAnalysisDetails({report}:{report:AdvancedReport}) {
  const labels:Record<string,string>={eligible:"Elegível para geração",discarded_site_real:"Site próprio identificado",analysis_inconclusive:"Análise inconclusiva"};
  return <section className="mt-3 space-y-2 rounded-xl border border-violet-100 bg-violet-50 p-3 text-xs text-slate-700">
   <p className="font-semibold">Análise avançada · {labels[report.decision] || report.decision}</p>
@@ -40,7 +40,7 @@ export function AdvancedAnalysisReport({report,companyName,actions,extraDetails}
     <Dialog.Content className="fixed left-1/2 top-1/2 z-[71] max-h-[85dvh] w-[calc(100%_-_2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl outline-none">
      <div className="flex items-start justify-between gap-4"><Dialog.Title className="text-lg font-bold text-slate-900">Análise completa{companyName ? ` — ${companyName}` : ""}</Dialog.Title><Dialog.Close aria-label="Fechar análise" className="shrink-0 rounded-lg p-1 text-slate-500 hover:bg-slate-100"><X size={20} /></Dialog.Close></div>
      <Dialog.Description className="mt-2 text-sm text-slate-500">Resultado, evidências, fontes e custo da pesquisa desta empresa.</Dialog.Description>
-     <AnalysisDetails report={report} />{extraDetails}{actions&&<div className="mt-4">{actions}</div>}
+     <AdvancedAnalysisDetails report={report} />{extraDetails}{actions&&<div className="mt-4">{actions}</div>}
     </Dialog.Content>
    </Dialog.Portal>
   </Dialog.Root>
