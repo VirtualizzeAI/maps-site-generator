@@ -71,3 +71,8 @@ No Kanban e em Análises inconclusivas, cartões avançados mostram só os dados
 ## Lista de empresas e detalhes
 
 Empresas usa linhas em lista responsiva, com nome, segmento/cidade, telefone, **Site gerado** e **Detalhes**. O link principal procura o último vínculo com URL publicada, ignorando operações posteriores sem site; todos os sites continuam acessíveis no histórico. Sem URL publicada, mostra Sem site gerado. Operações, análises completas, fontes, custos e demais contatos ficam no modal de detalhes da empresa, sem abrir um segundo modal para consultar a análise. Seleção, arquivamento individual/em lote e permissões são preservados.
+## Prospecção web
+
+Menu **Prospecção web**, também disponível em `/prospecting`: criação por nicho/cidade com checkboxes **LinkedIn e responsáveis** e **Redes sociais e telefones**, modelo e quantidade. Permite um ou ambos os grupos; site existente, endereço e análise rápida são pesquisados sempre. Não gera sites nem envia mensagens.
+
+Histórico e resultados atualizam automaticamente pela API própria. Cada empresa abre um modal com fontes, perfis profissionais/cargos/evidências e indicação de vínculo incerto, além dos contatos selecionados e consumo. Administradores/operadores criam; visualizadores consultam. A interface trata vazio, carregamento, erro, validação e confirma criação por notificação compacta.

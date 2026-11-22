@@ -173,9 +173,13 @@ const tables: TableConfig[] = [
     ],
     conflict: ["id"],
   },
+  {key:"prospectingOperations",table:"prospecting_operations",columns:["id","organization_id","created_by","niche","city","target_count","collect_linkedin","collect_contacts","model","status","found_count","analyzed_count","duplicate_count","current_company","error_message","discovery_usage","created_at","updated_at","started_at","finished_at"],conflict:["id"]},
+  {key:"prospectingResults",table:"prospecting_results",columns:["id","organization_id","operation_id","company_key","name","city","address","website","source_url","status","report","usage","created_at","updated_at"],conflict:["id"]},
 ];
 
 const empty = (): Database => ({
+  prospectingOperations: [],
+  prospectingResults: [],
   organizations: [],
   users: [],
   memberships: [],

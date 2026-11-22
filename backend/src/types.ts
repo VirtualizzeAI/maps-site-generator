@@ -1,3 +1,4 @@
+import type { ProspectingOperation, ProspectingResult } from "./prospecting-types.js";
 import type { AdvancedAnalysis } from "./integrations/advanced-analyzer.js";
 import type { SiteGenerationUsage } from "./site-usage.js";
 export type Role = "admin" | "operator" | "viewer";
@@ -148,6 +149,8 @@ export interface Event {
 }
 
 export interface Database {
+  prospectingOperations: ProspectingOperation[];
+  prospectingResults: ProspectingResult[];
   organizations: Organization[];
   users: User[];
   memberships: Membership[];

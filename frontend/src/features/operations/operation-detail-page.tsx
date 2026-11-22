@@ -200,6 +200,7 @@ export function OperationDetailPage({ operationId }: { operationId: string }) {
           <Nav href="/" icon={Settings} collapsed={sidebarCollapsed}>
             Configurações
           </Nav>
+          <Nav href="/prospecting" icon={Globe2} collapsed={sidebarCollapsed}>Prospecção web</Nav>
         </nav>
         <div
           className={`absolute bottom-5 rounded-xl bg-white/5 p-3 ${sidebarCollapsed ? "left-3 right-3 lg:flex lg:justify-center" : "left-5 right-5"}`}

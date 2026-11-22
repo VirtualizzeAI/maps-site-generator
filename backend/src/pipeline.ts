@@ -1,3 +1,4 @@
+import { processProspectingOperation } from "./prospecting-worker.js";
 import { config } from "./config.js";
 import { id, now } from "./auth.js";
 import { analyzeAdvanced } from "./integrations/advanced-analyzer.js";
@@ -58,6 +59,7 @@ export async function processNext() {
   const queued=store.snapshot().operationCompanies.find(x=>x.status==="site_action_queued");
   if(queued){processing=true;try{await processManualSiteAction(queued.id);}finally{processing=false;}return true;}
   const db = store.snapshot(),
+    prospecting = db.prospectingOperations?.filter(x=>x.status==="queued").sort((a,b)=>a.created_at.localeCompare(b.created_at))[0],
     operation = db.operations
       .filter(
         (item) =>
@@ -68,6 +70,7 @@ export async function processNext() {
               new Date(item.scheduled_for) <= new Date())),
       )
       .sort((a, b) => a.created_at.localeCompare(b.created_at))[0];
+  if(prospecting&&(!operation||prospecting.created_at.localeCompare(operation.created_at)<0)){processing=true;try{await processProspectingOperation(prospecting.id);}finally{processing=false;}return true;}
   if (!operation) return false;
   processing = true;
   try {

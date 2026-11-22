@@ -1,6 +1,15 @@
 # Estado atual do Maps Site Generator
 
-Última revisão: 18 de novembro de 2026.
+Última revisão: 22 de novembro de 2026.
+
+## Prospecção web sem geração de sites
+
+- Nova página/menu Prospecção web (`/prospecting`) pesquisa empresas por nicho/cidade diretamente com OpenAI Responses + web_search, sem Maps/Serper. Formulário permite escolher LinkedIn e responsáveis, Redes sociais e telefones, ou ambos, além de quantidade (1–30) e os três modelos existentes. Site próprio existente, endereço e análise breve são buscados sempre. Não gera sites, prepara abordagens nem envia mensagens.
+- Resultados em lista abrem modal com análise, página da empresa/perfis no LinkedIn, cargo, evidência e vínculo confirmado ou incerto; contatos comerciais e fontes por contato. Grupos não selecionados são omitidos no backend e na interface. Links devem constar nas fontes retornadas pela ferramenta; redes sociais e diretórios conhecidos não são tratados como site próprio. Isso não garante que todos os responsáveis sejam encontrados ou que a informação pública esteja atualizada.
+- Histórico, opções, autor, fontes, resultados e consumo persistidos em tabelas próprias. Descoberta e análise por empresa têm consumo registrado antes da interpretação, acumulando tokens/chamadas web/custo estimado, com indicação de valores indisponíveis. Não altera empresas, deduplicação ou histórico de contato do fluxo de sites. Repetições são removidas dentro de cada nova pesquisa; pesquisar novamente não equivale a abordar.
+- Administradores/operadores criam; visualizadores consultam; API valida organização/perfil. Migration `202611220001_web_prospecting.sql` cria tabelas com RLS e sem acesso direto de anon/authenticated. Backend mantém um único worker, respeitando a ordem de criação entre operações de sites/pesquisa (ações manuais de sites preservam prioridade existente). Limites por requisição: 6 chamadas de ferramenta, 10.000 tokens de saída e 180 segundos; custos dependem da quantidade/modelo/fontes.
+- Falha por empresa fica inconclusiva e permite continuar as demais. Falha de descoberta encerra com erro; não inventa empresas para atingir a quantidade. Não há repetição paga automática. Reinício no meio da pesquisa preserva o que já foi gravado, mas operações em processamento exigem conferência e não são retomadas automaticamente.
+- Validação: 107 testes e build do backend; lint/build frontend; navegador desktop/mobile para criação, checkboxes, seleção de modelo, erros, resultados, fontes, perfis/vínculo incerto, telefones e visualizador. API publicada também validou persistência/recarga JSONB, autenticação, isolamento entre organizações, perfil visualizador, limites/seleção e RLS em organizações temporárias, removidas ao final. Testes de integrações usaram mocks, sem pesquisa paga, geração, publicação de sites ou envio real.
 
 ## Listagem de empresas em linhas e botão do site
 
