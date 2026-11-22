@@ -1,0 +1,6 @@
+import type {AnalysisModel} from "@/components/advanced-analysis";
+export type Usage={estimated_cost_usd:number|null;web_search_calls:number;tokens:{total_tokens:number|null;source:string}};
+export type Report={summary:string;address:string|null;website:string|null;linkedin_company:string|null;responsible:{name:string;role:string;profile_url:string;source_url:string;evidence:string;confirmation:"confirmed"|"uncertain"}[];social_links:{url:string;source_url:string}[];phones:{number:string;source_url:string}[];sources:string[];notes:string[]};
+export type Result={id:string;name:string;city:string;address:string|null;website:string|null;source_url:string;status:"pending"|"completed"|"inconclusive";report:Report|null;usage:Usage|null};
+export type Totals={estimated_cost_usd:number;total_tokens:number;web_search_calls:number;unpriced:number};
+export type Operation={id:string;niche:string;city:string;target_count:number;model:AnalysisModel;collect_linkedin:boolean;collect_contacts:boolean;status:string;found_count:number;analyzed_count:number;duplicate_count:number;current_company:string|null;error_message:string|null;created_by?:string;started_at?:string|null;finished_at?:string|null;updated_at?:string;created_at:string;discovery_usage:Usage|null;totals?:Totals;results?:Result[]};

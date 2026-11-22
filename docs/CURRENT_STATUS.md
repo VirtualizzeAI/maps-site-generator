@@ -2,6 +2,14 @@
 
 Última revisão: 22 de novembro de 2026.
 
+## Página da operação web e CRM com kanbans
+
+- Cada operação de prospecção web abre `/prospecting/operations/[id]`, com abas Informações (configuração, datas, processamento e custos) e Resultado (lista de empresas, análise/contatos e site existente). Criação abre a nova página e o detalhe continua atualizando automaticamente.
+- Menu CRM prospecção (`/prospecting/crm`) permite criar, renomear e excluir kanbans, criar/editar/reordenar/excluir etapas e acompanhar empresas. Novos quadros começam com quatro etapas editáveis. Resultados oferecem Adicionar ao kanban, com seleção de quadro e etapa. Cartões mantêm link da operação de origem e análise completa, sem duplicar pesquisas ou disparar geração/envio.
+- Movimentação por ponteiro (mouse/toque) no ícone de arrastar ou por modal Mover etapa para teclado. Gravação só confirma após sucesso da API; conflitos de estágio são recusados para não sobrescrever movimentos concorrentes. Empresa repetida no mesmo quadro é bloqueada pela chave da pesquisa (nome/cidade), inclusive em pedidos simultâneos; pode participar de quadros distintos.
+- Exclusões pedem confirmação. Etapa ocupada exige outra etapa de destino e transfere empresas atomicamente; a última etapa ocupada exige criar outra antes. Exclusão de quadro/cartão é lógica, mantém auditoria e preserva pesquisas de origem e deduplicação do fluxo de sites. Administradores/operadores alteram o CRM; visualizadores consultam. Não há envio de WhatsApp pelo CRM.
+- Migration `202611220002_prospecting_crm.sql` cria quadros, etapas e cartões com chaves por organização, unicidade de empresa ativa por quadro e RLS sem acesso direto dos papéis do navegador. Backend continua em processo único com gravações serializadas. Validação do backend: 119 testes e build; API publicada em organização temporária verificou CRUD, transferência, conflitos, permissões, recarga de dados do banco, RLS e preservação da pesquisa. Lint/build do frontend e navegador desktop/mobile verificaram página/abas, modais, escolhas, CRUD, arrastar por mouse/toque, recarga, conflitos/erros e perfil visualizador, com APIs simuladas. Fixtures removidas; nenhum consumo de IA, site ou mensagem real.
+
 ## Prospecção web sem geração de sites
 
 - Nova página/menu Prospecção web (`/prospecting`) pesquisa empresas por nicho/cidade diretamente com OpenAI Responses + web_search, sem Maps/Serper. Formulário permite escolher LinkedIn e responsáveis, Redes sociais e telefones, ou ambos, além de quantidade (1–30) e os três modelos existentes. Site próprio existente, endereço e análise breve são buscados sempre. Não gera sites, prepara abordagens nem envia mensagens.

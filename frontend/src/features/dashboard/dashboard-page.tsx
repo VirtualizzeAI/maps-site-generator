@@ -2,6 +2,8 @@
 
 import { analysisModelOptions, AnalysisCostSummary, AdvancedAnalysisDetails, type AnalysisModel, type AnalysisTotals, type AdvancedReport } from "@/components/advanced-analysis";
 import { SiteUsage, GenerationCostSummary, type SiteGenerationUsage, type GenerationTotals } from "@/components/site-generation-usage";
+import { ProspectingOperationPage } from "@/features/prospecting/operation-page";
+import { ProspectingCrm } from "@/features/prospecting/crm";
 import { ProspectingModule } from "@/features/prospecting/prospecting-module";
 import { Dialog } from "radix-ui";
 import Link from "next/link";
@@ -13,6 +15,7 @@ import {
   Check,
   ExternalLink,
   Gauge,
+  KanbanSquare,
   Globe2,
   Loader2,
   LogOut,
@@ -44,7 +47,7 @@ import type { ApprovalMode, Operation } from "@/features/operations/types";
 import { useSidebarCollapse } from "@/hooks/use-sidebar-collapse";
 
 type View =
-  "overview" | "operations" | "companies" | "reviews" | "users" | "settings" | "prospecting";
+  "overview" | "operations" | "companies" | "reviews" | "users" | "settings" | "prospecting" | "prospecting-crm";
 type Summary = {
   generation_totals?: GenerationTotals;
   analysis_totals?: AnalysisTotals;
@@ -140,7 +143,7 @@ const labels: Record<string, string> = {
 const template =
   "Olá! Criei uma demonstração de site para a {{empresa}}. Veja aqui: {{link}}. Se gostar, posso explicar como colocamos no ar para você.";
 
-export function DashboardPage({initialView="overview"}:{initialView?:View}={}) {
+export function DashboardPage({initialView="overview",prospectingOperationId}:{initialView?:View;prospectingOperationId?:string}={}) {
   const router = useRouter();
   const { collapsed: sidebarCollapsed, toggleCollapsed } = useSidebarCollapse();
   const [user, setUser] = useState<CurrentUser | null>(null),
@@ -214,6 +217,7 @@ export function DashboardPage({initialView="overview"}:{initialView?:View}={}) {
     ["operations", "Operações", Activity],
     ["companies", "Empresas", Building2],
     ["prospecting", "Prospecção web", Globe2],
+    ["prospecting-crm", "CRM prospecção", KanbanSquare],
     ["reviews", "Aprovações", MessageSquareText],
     ["users", "Usuários", Users],
     ["settings", "Configurações", Settings],
@@ -266,6 +270,7 @@ export function DashboardPage({initialView="overview"}:{initialView?:View}={}) {
             <button
               key={id}
               onClick={() => {
+                if(id==="prospecting"||id==="prospecting-crm"){router.push(id==="prospecting-crm"?"/prospecting/crm":"/prospecting");}
                 setView(id);
                 setMenu(false);
               }}
@@ -321,7 +326,7 @@ export function DashboardPage({initialView="overview"}:{initialView?:View}={}) {
               {org.name} · Supabase
             </p>
           </div>
-          {view!=="prospecting"&&<button
+          {view!=="prospecting"&&view!=="prospecting-crm"&&<button
             onClick={() => setNewOpen(true)}
             className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white"
           >
@@ -343,7 +348,8 @@ export function DashboardPage({initialView="overview"}:{initialView?:View}={}) {
               onError={setError}
             />
           )}{" "}
-          {view === "prospecting" && <ProspectingModule org={org.id} token={token} canCreate={org.role==="admin"||org.role==="operator"} />}
+          {view === "prospecting" && (prospectingOperationId ? <ProspectingOperationPage operationId={prospectingOperationId} org={org.id} token={token} canEdit={org.role!=="viewer"} /> : <ProspectingModule org={org.id} token={token} canCreate={org.role!=="viewer"} />)}
+          {view === "prospecting-crm" && <ProspectingCrm org={org.id} token={token} canEdit={org.role!=="viewer"} />}
           {view === "operations" && (
             <Operations
               operations={operations}

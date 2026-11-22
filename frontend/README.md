@@ -76,3 +76,7 @@ Empresas usa linhas em lista responsiva, com nome, segmento/cidade, telefone, **
 Menu **Prospecção web**, também disponível em `/prospecting`: criação por nicho/cidade com checkboxes **LinkedIn e responsáveis** e **Redes sociais e telefones**, modelo e quantidade. Permite um ou ambos os grupos; site existente, endereço e análise rápida são pesquisados sempre. Não gera sites nem envia mensagens.
 
 Histórico e resultados atualizam automaticamente pela API própria. Cada empresa abre um modal com fontes, perfis profissionais/cargos/evidências e indicação de vínculo incerto, além dos contatos selecionados e consumo. Administradores/operadores criam; visualizadores consultam. A interface trata vazio, carregamento, erro, validação e confirma criação por notificação compacta.
+
+Operações abrem `/prospecting/operations/[id]`, com **Informações** (opções, datas, progresso e consumo) e **Resultado** (lista existente). **Adicionar ao kanban** abre seleção de quadro/etapa; erros preservam a escolha para nova tentativa.
+
+**CRM prospecção** (`/prospecting/crm`) permite criar/editar/excluir kanbans e etapas, ordenar etapas e mover empresas por arrastar o ícone com mouse/toque ou pelo botão **Mover etapa**. Cartões mostram análise, site existente e operação de origem. Exclusões pedem confirmação; etapas ocupadas exigem destino para preservar empresas. Movimentos e formulários mostram sucesso/erro por notificações pequenas. Visualizadores consultam sem controles de alteração. Nenhuma ação do CRM inicia geração, pesquisa ou envio.

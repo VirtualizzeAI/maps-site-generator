@@ -105,3 +105,14 @@ O módulo independente usa OpenAI Responses + `web_search` para descobrir empres
 Aplique `supabase/migrations/202611220001_web_prospecting.sql` antes de atualizar o backend. Dados ficam em `prospecting_operations` e `prospecting_results`, com RLS e acesso pelo backend. O worker único compartilha a fila com as operações de sites por ordem de criação. Repetições são removidas dentro da pesquisa, sem alterar o histórico de deduplicação/abordagem dos sites.
 
 Cada requisição limita ferramentas a 6 chamadas, saída a 10.000 tokens e duração a 180 segundos. Consumo da descoberta e de cada empresa é salvo antes de interpretar a resposta. Falhas preservam custos já registrados; não há repetição automática nem retomada de pesquisas interrompidas por reinício. Modo mock mantém o mesmo contrato com zero consumo. Perfis/contatos exigem URLs nas fontes retornadas pela ferramenta; vínculo/cargo incerto fica identificado e dados não encontrados ficam vazios.
+
+## CRM da prospecção web
+
+Aplicar `202611220002_prospecting_crm.sql` antes do backend. Prefixo `/api/v1/prospecting/crm`:
+
+- `GET/POST /boards`, `GET/PATCH/DELETE /boards/:id`: listar/criar/detalhar/renomear/excluir quadros. POST recebe `organization_id` e `name`; cria quatro etapas editáveis. GET list exige organização na query e inclui etapas/contadores.
+- `POST /boards/:id/stages`, `PATCH/DELETE /stages/:id`: criar, editar nome/posição e excluir etapas. DELETE de etapa ocupada exige `destination_stage_id` do mesmo quadro, transferindo cartões antes de ocultar a etapa.
+- `POST /cards`: recebe `board_id`, `stage_id`, `result_id`; organização e identidade são resolvidas no servidor. Bloqueia empresa ativa repetida por quadro, mesmo vinda de outra pesquisa com a mesma chave nome/cidade.
+- `PATCH /cards/:id`: recebe `stage_id` e `expected_stage_id`; recusa conflitos de movimentação. `DELETE /cards/:id` remove do quadro preservando a pesquisa.
+
+Leitura por membros; alterações por administradores/operadores. Validação de organização e estado é repetida dentro da gravação serializada. Quadros, etapas e cartões têm exclusão lógica, referências compostas por organização e auditoria. Detalhe do quadro incorpora os resultados/relatórios originais e suas opções de pesquisa; não chama integrações de pesquisa, geração ou WhatsApp. RLS bloqueia acesso direto do navegador.
