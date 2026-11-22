@@ -1,4 +1,5 @@
 import type { ProspectingOperation, ProspectingResult } from "./prospecting-types.js";
+import type { ProspectingBoard, ProspectingStage, ProspectingCard } from "./prospecting-crm-types.js";
 import type { AdvancedAnalysis } from "./integrations/advanced-analyzer.js";
 import type { SiteGenerationUsage } from "./site-usage.js";
 export type Role = "admin" | "operator" | "viewer";
@@ -149,6 +150,9 @@ export interface Event {
 }
 
 export interface Database {
+  prospectingBoards: ProspectingBoard[];
+  prospectingStages: ProspectingStage[];
+  prospectingCards: ProspectingCard[];
   prospectingOperations: ProspectingOperation[];
   prospectingResults: ProspectingResult[];
   organizations: Organization[];

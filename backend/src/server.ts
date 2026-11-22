@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import { registerProspectingRoutes } from "./prospecting-routes.js";
+import { registerProspectingCrmRoutes } from "./prospecting-crm-routes.js";
 import { queueSiteAction, validateSiteAction } from "./site-actions.js";
 import { operationSchema } from "./operation-schema.js";
 import { summarizeAnalysis } from "./integrations/advanced-analyzer.js";
@@ -179,6 +180,7 @@ app.post("/api/v1/operations", async (request) => {
 });
 
 registerProspectingRoutes(app);
+registerProspectingCrmRoutes(app);
 
 app.get("/api/v1/operations", async (request) => {
   const user = await currentUser(request),

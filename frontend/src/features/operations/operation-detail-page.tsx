@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Gauge,
   Globe2,
+  KanbanSquare,
   Loader2,
   LogOut,
   Mail,
@@ -201,6 +202,7 @@ export function OperationDetailPage({ operationId }: { operationId: string }) {
             Configurações
           </Nav>
           <Nav href="/prospecting" icon={Globe2} collapsed={sidebarCollapsed}>Prospecção web</Nav>
+          <Nav href="/prospecting/crm" icon={KanbanSquare} collapsed={sidebarCollapsed}>CRM prospecção</Nav>
         </nav>
         <div
           className={`absolute bottom-5 rounded-xl bg-white/5 p-3 ${sidebarCollapsed ? "left-3 right-3 lg:flex lg:justify-center" : "left-5 right-5"}`}

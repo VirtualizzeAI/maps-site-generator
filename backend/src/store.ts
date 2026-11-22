@@ -175,9 +175,15 @@ const tables: TableConfig[] = [
   },
   {key:"prospectingOperations",table:"prospecting_operations",columns:["id","organization_id","created_by","niche","city","target_count","collect_linkedin","collect_contacts","model","status","found_count","analyzed_count","duplicate_count","current_company","error_message","discovery_usage","created_at","updated_at","started_at","finished_at"],conflict:["id"]},
   {key:"prospectingResults",table:"prospecting_results",columns:["id","organization_id","operation_id","company_key","name","city","address","website","source_url","status","report","usage","created_at","updated_at"],conflict:["id"]},
+  {key:"prospectingBoards",table:"prospecting_boards",columns:["id","organization_id","name","created_by","deleted_at","created_at","updated_at"],conflict:["id"]},
+  {key:"prospectingStages",table:"prospecting_stages",columns:["id","organization_id","board_id","name","position","deleted_at","created_at","updated_at"],conflict:["id"]},
+  {key:"prospectingCards",table:"prospecting_cards",columns:["id","organization_id","board_id","stage_id","result_id","company_key","created_by","deleted_at","created_at","updated_at"],conflict:["id"]},
 ];
 
 const empty = (): Database => ({
+  prospectingBoards: [],
+  prospectingStages: [],
+  prospectingCards: [],
   prospectingOperations: [],
   prospectingResults: [],
   organizations: [],
