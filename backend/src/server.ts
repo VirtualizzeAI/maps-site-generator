@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import { registerProspectingRoutes } from "./prospecting-routes.js";
 import { queueSiteAction, validateSiteAction } from "./site-actions.js";
 import { operationSchema } from "./operation-schema.js";
 import { summarizeAnalysis } from "./integrations/advanced-analyzer.js";
@@ -176,6 +177,8 @@ app.post("/api/v1/operations", async (request) => {
   await store.mutate((db) => db.operations.push(operation));
   return operation;
 });
+
+registerProspectingRoutes(app);
 
 app.get("/api/v1/operations", async (request) => {
   const user = await currentUser(request),

@@ -33,7 +33,7 @@ beforeEach(()=>{
   vi.useFakeTimers();vi.setSystemTime(started);vi.clearAllMocks();fixture.nextId=0;fixture.sendTimes=[];fixture.queue=Promise.resolve();
   const operation:Operation={id:"operation",organization_id:"org",created_by:"admin",niche:"Teste",city:"Mossoró",target_count:2,approval_mode:"automatic",message_template:"Olá {{empresa}}: {{link}}",status:"queued",scheduled_for:null,started_at:null,finished_at:null,error_message:null,found_count:0,analyzed_count:0,generated_count:0,sent_count:0,discarded_count:0,blocked_count:0,current_company_id:null,current_company_name:null,current_stage:null,archived_at:null,archived_by:null,created_at:new Date(started).toISOString(),updated_at:new Date(started).toISOString()};
   const integration:IntegrationSettings={organization_id:"org",serper_api_key:"",openai_api_key:"",openai_model:"test",site_generation_prompt:"",automatic_send_interval_seconds:2,vercel_token:"",evolution_url:"",evolution_api_key:"",evolution_instance:"",whatsapp_test_mode:false,whatsapp_test_number:"",updated_at:new Date(started).toISOString()};
-  fixture.db={organizations:[],users:[],memberships:[],integrations:[integration],operations:[operation],companies:[],operationCompanies:[],messages:[],events:[]};
+  fixture.db={prospectingOperations:[],prospectingResults:[],organizations:[],users:[],memberships:[],integrations:[integration],operations:[operation],companies:[],operationCompanies:[],messages:[],events:[]};
   vi.mocked(searchCompanies).mockResolvedValue(candidates);
   vi.mocked(createSite).mockImplementation(async candidate=>({url:`https://example.com/${candidate.source_id}`,deploymentId:null,slug:candidate.source_id!}));
 });

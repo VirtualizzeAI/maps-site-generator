@@ -2,6 +2,7 @@
 
 import { analysisModelOptions, AnalysisCostSummary, AdvancedAnalysisDetails, type AnalysisModel, type AnalysisTotals, type AdvancedReport } from "@/components/advanced-analysis";
 import { SiteUsage, GenerationCostSummary, type SiteGenerationUsage, type GenerationTotals } from "@/components/site-generation-usage";
+import { ProspectingModule } from "@/features/prospecting/prospecting-module";
 import { Dialog } from "radix-ui";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
@@ -43,7 +44,7 @@ import type { ApprovalMode, Operation } from "@/features/operations/types";
 import { useSidebarCollapse } from "@/hooks/use-sidebar-collapse";
 
 type View =
-  "overview" | "operations" | "companies" | "reviews" | "users" | "settings";
+  "overview" | "operations" | "companies" | "reviews" | "users" | "settings" | "prospecting";
 type Summary = {
   generation_totals?: GenerationTotals;
   analysis_totals?: AnalysisTotals;
@@ -139,11 +140,11 @@ const labels: Record<string, string> = {
 const template =
   "Olá! Criei uma demonstração de site para a {{empresa}}. Veja aqui: {{link}}. Se gostar, posso explicar como colocamos no ar para você.";
 
-export function DashboardPage() {
+export function DashboardPage({initialView="overview"}:{initialView?:View}={}) {
   const router = useRouter();
   const { collapsed: sidebarCollapsed, toggleCollapsed } = useSidebarCollapse();
   const [user, setUser] = useState<CurrentUser | null>(null),
-    [view, setView] = useState<View>("overview"),
+    [view, setView] = useState<View>(initialView),
     [loading, setLoading] = useState(true),
     [menu, setMenu] = useState(false),
     [newOpen, setNewOpen] = useState(false);
@@ -212,6 +213,7 @@ export function DashboardPage() {
     ["overview", "Visão geral", Gauge],
     ["operations", "Operações", Activity],
     ["companies", "Empresas", Building2],
+    ["prospecting", "Prospecção web", Globe2],
     ["reviews", "Aprovações", MessageSquareText],
     ["users", "Usuários", Users],
     ["settings", "Configurações", Settings],
@@ -319,13 +321,13 @@ export function DashboardPage() {
               {org.name} · Supabase
             </p>
           </div>
-          <button
+          {view!=="prospecting"&&<button
             onClick={() => setNewOpen(true)}
             className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white"
           >
             <Play size={16} />
             Nova operação
-          </button>
+          </button>}
         </header>
         <div className="p-5 lg:p-8">
           {error && (
@@ -341,6 +343,7 @@ export function DashboardPage() {
               onError={setError}
             />
           )}{" "}
+          {view === "prospecting" && <ProspectingModule org={org.id} token={token} canCreate={org.role==="admin"||org.role==="operator"} />}
           {view === "operations" && (
             <Operations
               operations={operations}
