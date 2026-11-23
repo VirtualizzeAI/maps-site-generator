@@ -29,7 +29,7 @@ export function ProspectingModule({org,token,canCreate}:{org:string;token:string
      {!form.collect_linkedin&&!form.collect_contacts&&<p role="alert" className="text-xs text-red-600">Selecione pelo menos um grupo de dados.</p>}
     </fieldset>
     <label className="block text-sm font-medium">Modelo da pesquisa<select value={form.model} onChange={e=>setForm({...form,model:e.target.value as AnalysisModel})} className="mt-2 w-full rounded-xl border px-3 py-3">{analysisModelOptions.map(m=><option key={m.id} value={m.id}>{m.label}</option>)}</select></label>
-    <p className="text-xs text-slate-500">Pesquisa e análise consomem tokens e chamadas web. Site existente e análise rápida são buscados em todas as opções; responsáveis e contatos só nos grupos selecionados.</p>
+    <p className="text-xs text-slate-500">Pesquisa e análise consomem tokens e chamadas web. Site existente, análise rápida e CNPJ são pesquisados em todas as opções. LinkedIn e responsáveis inclui sócios/fundadores e CRM médico quando aplicável. Redes sociais e telefones inclui contatos cadastrais/profissionais públicos.</p>
     <button disabled={busy||(!form.collect_linkedin&&!form.collect_contacts)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 p-3 font-semibold text-white disabled:opacity-50">{busy&&<Loader2 size={16} className="animate-spin" />}{busy?"Criando...":"Criar prospecção"}</button>
    </fieldset></form>
   </Dialog.Content></Dialog.Portal></Dialog.Root>
