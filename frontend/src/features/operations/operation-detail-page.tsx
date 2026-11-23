@@ -147,10 +147,10 @@ export function OperationDetailPage({ operationId }: { operationId: string }) {
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 border-r border-white/10 bg-[#07111f] p-5 text-white transition-[width,transform] duration-200 lg:translate-x-0 ${sidebarCollapsed ? "lg:w-20 lg:px-3" : "lg:w-64"} ${menu ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/10 bg-[#07111f] p-5 text-white transition-[width,transform] duration-200 lg:translate-x-0 ${sidebarCollapsed ? "lg:w-20 lg:px-3" : "lg:w-64"} ${menu ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div
-          className={`flex items-center justify-between ${sidebarCollapsed ? "lg:justify-center" : ""}`}
+          className={`flex shrink-0 items-center justify-between ${sidebarCollapsed ? "lg:justify-center" : ""}`}
         >
           <Link href="/" className="flex items-center gap-3">
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-500">
@@ -182,7 +182,7 @@ export function OperationDetailPage({ operationId }: { operationId: string }) {
             <PanelLeftClose size={15} />
           )}
         </button>
-        <nav className="mt-10 space-y-2">
+        <nav aria-label="Menu principal" className="mt-8 min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain py-2">
           <Nav href="/" icon={Gauge} collapsed={sidebarCollapsed}>
             Visão geral
           </Nav>
@@ -198,14 +198,14 @@ export function OperationDetailPage({ operationId }: { operationId: string }) {
           <Nav href="/" icon={Users} collapsed={sidebarCollapsed}>
             Usuários
           </Nav>
-          <Nav href="/" icon={Settings} collapsed={sidebarCollapsed}>
+          <Nav href="/settings" icon={Settings} collapsed={sidebarCollapsed}>
             Configurações
           </Nav>
           <Nav href="/prospecting" icon={Globe2} collapsed={sidebarCollapsed}>Prospecção web</Nav>
           <Nav href="/prospecting/crm" icon={KanbanSquare} collapsed={sidebarCollapsed}>CRM prospecção</Nav>
         </nav>
         <div
-          className={`absolute bottom-5 rounded-xl bg-white/5 p-3 ${sidebarCollapsed ? "left-3 right-3 lg:flex lg:justify-center" : "left-5 right-5"}`}
+          aria-label="Conta do usuário" className={`mt-4 shrink-0 rounded-xl bg-white/5 p-3 ${sidebarCollapsed ? "lg:flex lg:justify-center" : ""}`}
         >
           <div className={sidebarCollapsed ? "lg:hidden" : ""}>
             <p className="truncate text-sm font-medium">{user.name}</p>

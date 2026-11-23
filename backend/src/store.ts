@@ -3,6 +3,7 @@ import type { PoolClient } from "pg";
 import { config, sitesDir } from "./config.js";
 import { database } from "./database.js";
 import { DEFAULT_SITE_GENERATION_PROMPT } from "./site-prompt.js";
+import { effectiveProspectingPrompt } from "./integrations/prospecting-prompt.js";
 import type { Database, IntegrationSettings } from "./types.js";
 
 type Collection = keyof Database;
@@ -39,6 +40,7 @@ const tables: TableConfig[] = [
       "organization_id",
       "openai_model",
       "site_generation_prompt",
+      "prospecting_prompt",
       "automatic_send_interval_seconds",
       "evolution_url",
       "evolution_instance",
@@ -259,6 +261,7 @@ class PostgresStore {
       ...item,
       openai_model: item.openai_model || config.openaiModel,
       site_generation_prompt: item.site_generation_prompt?.trim() || DEFAULT_SITE_GENERATION_PROMPT,
+      prospecting_prompt: effectiveProspectingPrompt(item.prospecting_prompt),
       automatic_send_interval_seconds: item.automatic_send_interval_seconds ?? 0,
       evolution_url: item.evolution_url || "",
       evolution_instance: item.evolution_instance || "",

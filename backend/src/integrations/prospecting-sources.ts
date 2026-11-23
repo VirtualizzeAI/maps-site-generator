@@ -1,6 +1,7 @@
 import {safeSource} from "./advanced-analyzer.js";
 
 const within=(host:string,domain:string)=>host===domain||host.endsWith("."+domain);
+export const registryDomains=["receita.fazenda.gov.br","receitafederal.gov.br","redesim.gov.br","econodata.com.br","cnpj.biz","cnpj.ws","cnpj.info","casadosdados.com.br","cnpjja.com","receitaws.com.br","juridicoonline.com.br","empresas.serasaexperian.com.br","informecadastral.com.br"];
 export function canonical(value:unknown){
  const safe=safeSource(value);if(!safe)return null;
  const url=new URL(safe);url.hostname=url.hostname.replace(/^www\./,"");
@@ -11,7 +12,7 @@ export function canonical(value:unknown){
 }
 export function isRegistrySource(value:string){
  const url=new URL(value),host=url.hostname;
- return ["receita.fazenda.gov.br","receitafederal.gov.br","redesim.gov.br","econodata.com.br","cnpj.biz","cnpj.ws","casadosdados.com.br","cnpjja.com","receitaws.com.br"].some(d=>within(host,d))||host==="gov.br"&&/^\/receitafederal\//.test(url.pathname);
+ return registryDomains.some(d=>within(host,d))||host==="gov.br"&&/^\/receitafederal\//.test(url.pathname);
 }
 export function isRegistryRecord(value:string){
  const url=new URL(value);

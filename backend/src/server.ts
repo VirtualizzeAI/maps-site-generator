@@ -21,6 +21,7 @@ import { config, sitesDir } from "./config.js";
 import { createUserSchema, integrationPatchSchema, validateTestRecipient } from "./admin-schemas.js";
 import { checkDatabase } from "./database.js";
 import { DEFAULT_SITE_GENERATION_PROMPT } from "./site-prompt.js";
+import { DEFAULT_PROSPECTING_PROMPT,effectiveProspectingPrompt } from "./integrations/prospecting-prompt.js";
 import { approveMessageSchema, editPendingMessageSchema } from "./message-schemas.js";
 import { sendWhatsApp, WhatsAppDeliveryError } from "./integrations/whatsapp.js";
 import { startWorker } from "./pipeline.js";
@@ -748,6 +749,8 @@ function integrationView(item: IntegrationSettings) {
     site_generation_prompt: item.site_generation_prompt || DEFAULT_SITE_GENERATION_PROMPT,
     automatic_send_interval_seconds: item.automatic_send_interval_seconds ?? 0,
     default_site_generation_prompt: DEFAULT_SITE_GENERATION_PROMPT,
+    prospecting_prompt: effectiveProspectingPrompt(item.prospecting_prompt),
+    default_prospecting_prompt: DEFAULT_PROSPECTING_PROMPT,
     vercel_configured: !!item.vercel_token,
     evolution_configured: !!(
       (item.evolution_url || config.evolutionUrl) &&
