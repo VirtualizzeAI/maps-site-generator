@@ -5,7 +5,8 @@ import { SiteUsage, GenerationCostSummary, type SiteGenerationUsage, type Genera
 import { ProspectingOperationPage } from "@/features/prospecting/operation-page";
 import { ProspectingCrm } from "@/features/prospecting/crm";
 import { ProspectingModule } from "@/features/prospecting/prospecting-module";
-import { Dialog } from "radix-ui";
+import { Dialog,Tabs } from "radix-ui";
+import {ProspectingPromptSettings} from "@/features/prospecting/prompt-settings";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -107,6 +108,8 @@ type Integration = {
   site_generation_prompt: string;
   automatic_send_interval_seconds: number;
   default_site_generation_prompt: string;
+  prospecting_prompt: string;
+  default_prospecting_prompt: string;
   vercel_configured: boolean;
   evolution_configured: boolean;
   evolution_url: string | null;
@@ -232,10 +235,10 @@ export function DashboardPage({initialView="overview",prospectingOperationId}:{i
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 border-r border-white/10 bg-[#07111f] p-5 text-white transition-[width,transform] duration-200 lg:translate-x-0 ${sidebarCollapsed ? "lg:w-20 lg:px-3" : "lg:w-64"} ${menu ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/10 bg-[#07111f] p-5 text-white transition-[width,transform] duration-200 lg:translate-x-0 ${sidebarCollapsed ? "lg:w-20 lg:px-3" : "lg:w-64"} ${menu ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div
-          className={`flex items-center gap-3 ${sidebarCollapsed ? "lg:justify-center" : ""}`}
+          className={`flex shrink-0 items-center gap-3 ${sidebarCollapsed ? "lg:justify-center" : ""}`}
         >
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-500">
             <Radar size={21} />
@@ -265,12 +268,12 @@ export function DashboardPage({initialView="overview",prospectingOperationId}:{i
             <PanelLeftClose size={15} />
           )}
         </button>
-        <nav className="mt-10 space-y-2">
+        <nav aria-label="Menu principal" className="mt-8 min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain py-2">
           {nav.map(([id, label, Icon]) => (
             <button
               key={id}
               onClick={() => {
-                if(id==="prospecting"||id==="prospecting-crm"){router.push(id==="prospecting-crm"?"/prospecting/crm":"/prospecting");}
+                if(id==="settings"||id==="prospecting"||id==="prospecting-crm"){router.push(id==="settings"?"/settings":id==="prospecting-crm"?"/prospecting/crm":"/prospecting");}
                 setView(id);
                 setMenu(false);
               }}
@@ -292,7 +295,7 @@ export function DashboardPage({initialView="overview",prospectingOperationId}:{i
           ))}
         </nav>
         <div
-          className={`absolute bottom-5 rounded-xl bg-white/5 p-3 ${sidebarCollapsed ? "left-3 right-3 lg:flex lg:justify-center" : "left-5 right-5"}`}
+          aria-label="Conta do usuário" className={`mt-4 shrink-0 rounded-xl bg-white/5 p-3 ${sidebarCollapsed ? "lg:flex lg:justify-center" : ""}`}
         >
           <div className={sidebarCollapsed ? "lg:hidden" : ""}>
             <p className="truncate text-sm font-medium">{user.name}</p>
@@ -1138,7 +1141,10 @@ function Team({
     </div>
   );
 }
-function Integrations({
+function Integrations(props:{canManage:boolean;integration:Integration|null;org:string;token:string;refresh:()=>void}){
+  return <Tabs.Root defaultValue="integrations"><Tabs.List aria-label="Abas de configurações" className="mb-5 flex flex-wrap gap-2 border-b"><Tabs.Trigger value="integrations" className="border-b-2 border-transparent px-4 py-3 text-sm font-semibold data-[state=active]:border-blue-600 data-[state=active]:text-blue-700">Integrações e sites</Tabs.Trigger><Tabs.Trigger value="prospecting" className="border-b-2 border-transparent px-4 py-3 text-sm font-semibold data-[state=active]:border-blue-600 data-[state=active]:text-blue-700">Prospecção web</Tabs.Trigger></Tabs.List><Tabs.Content value="integrations" forceMount className="outline-none data-[state=inactive]:hidden"><IntegrationFields {...props}/></Tabs.Content><Tabs.Content value="prospecting" forceMount className="outline-none data-[state=inactive]:hidden">{props.integration?<ProspectingPromptSettings org={props.org} token={props.token} canManage={props.canManage} initialPrompt={props.integration.prospecting_prompt||props.integration.default_prospecting_prompt||""} defaultPrompt={props.integration.default_prospecting_prompt||""} refresh={props.refresh}/>:<p className="text-sm text-slate-500">Carregando configurações...</p>}</Tabs.Content></Tabs.Root>;
+}
+function IntegrationFields({
   canManage,
   integration,
   org,
