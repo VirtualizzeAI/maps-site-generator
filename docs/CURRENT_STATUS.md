@@ -1,6 +1,14 @@
 # Estado atual do Maps Site Generator
 
-Última revisão: 22 de novembro de 2026.
+Última revisão: 23 de novembro de 2026.
+
+## Pesquisa web focada, CNPJ e sócios/fundadores
+
+- Novas pesquisas priorizam site próprio, Instagram, Facebook e LinkedIn. Prompts direcionam consultas por nome/cidade e excluem prefeituras, licitações, diários e documentos genéricos. O backend descarta fontes governamentais sem relação cadastral, mantendo exceções Receita/REDESIM; fontes do conselho médico são pertinentes para CRM. O relatório registra somente fontes utilizadas nos campos aceitos, sem despejar todas as páginas retornadas pela ferramenta. Pesquisa sem evidências úteis fica inconclusiva.
+- Quando encontra CNPJ, busca razão social, situação/endereço cadastral, QSA e contatos comerciais cadastrados. Valida dígitos do CNPJ numérico/alfanumérico e exige fonte consultada e correspondência de identidade; dados cadastrais de terceiros/incertos são omitidos. Sócio do QSA não é automaticamente fundador. Contatos cadastrais ficam separados dos contatos profissionais individuais, pois podem ser da contabilidade.
+- Grupo LinkedIn e responsáveis inclui pesquisa de até quatro sócios/fundadores, perfis profissionais e CRM médico quando aplicável. Grupo Redes sociais e telefones controla contatos cadastrais/profissionais e Instagram/Facebook. Campos de grupos não selecionados são removidos no backend; contatos privados, fontes ausentes, homônimos/UF inválida e formulários genéricos de consulta não viram registros médicos confirmados. CRM divulgado em página profissional fica distinto de fonte individual do conselho. A pesquisa assistida por IA pode não encontrar dados ou confundir informações públicas; vínculos incertos ficam identificados, sem contatos/CRM atribuídos automaticamente.
+- Modal da operação e do CRM mostra CNPJ/QSA, contatos cadastrais, sócios/fundadores, perfis e registro médico com UF/fonte. Campos são opcionais no JSONB já existente (`research_version:2`); histórico anterior e kanbans são preservados, sem migration ou reprocessamento pago. Permanecem 6 chamadas web, 10.000 tokens de saída e 180 segundos por requisição, com custo persistido antes da interpretação. Não altera geração/envio.
+- Validação: 134 testes e build backend; lint/build frontend; navegador desktop/mobile para dados cadastrais, separação de contatos, CRM oficial/informado, grupos selecionados, legado, não encontrados e modal no kanban. API publicada em organizações temporárias validou JSONB completo, recarga, dados retornados/permissões e isolamento. Fixtures removidas; nenhuma pesquisa paga, geração ou envio real executado. Referências consultadas: [consulta CNPJ/QSA](https://www.gov.br/pt-br/servicos/consultar-cadastro-nacional-de-pessoas-juridicas), [DV CNPJ](https://www.gov.br/receitafederal/pt-br/centrais-de-conteudo/publicacoes/documentos-tecnicos/cnpj), [busca médica CFM](https://portal.cfm.org.br/busca-medicos) e [web_search](https://developers.openai.com/api/docs/guides/tools-web-search).
 
 ## Página da operação web e CRM com kanbans
 
